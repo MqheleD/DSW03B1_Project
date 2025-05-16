@@ -27,15 +27,6 @@ yarn-error.log*
 .env.production
 .env.development
 
-# --- Flutter (if used) ---
-build/
-.flutter-plugins
-.flutter-plugins-dependencies
-.packages
-.pub-cache/
-.pub/
-.DS_Store
-
 # --- General ---
 .idea/
 .vscode/
