@@ -1,0 +1,66 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg
+*.egg-info/
+dist/
+build/
+.env
+.venv/
+venv/
+env/
+*.sqlite3
+
+# --- FastAPI/Flask ---
+instance/
+*.db
+
+# --- Node.js / React Native ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.expo/
+.expo-shared/
+*.expo/
+.env.local
+.env.production
+.env.development
+
+# --- Flutter (if used) ---
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+.DS_Store
+
+# --- General ---
+.idea/
+.vscode/
+*.log
+*.bak
+*.swp
+*.swo
+*.tmp
+*.orig
+*.lock
+*.zip
+*.tar.gz
+*.iml
+Thumbs.db
+.DS_Store
+
+# --- OS Specific ---
+# macOS
+*.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# --- VS Code ---
+.vscode/
