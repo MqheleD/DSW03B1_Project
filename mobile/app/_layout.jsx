@@ -1,13 +1,30 @@
-import { Stack } from "expo-router";
-// import Index from "./index";
-// import login from "./login";
+import { StatusBar } from 'expo-status-bar';
+import { StyleSheet, Text, View } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import Splash from './SplashScreen';
+import Signin from './SignIn';
+import Login from './Login';
 
+const Stack = createNativeStackNavigator();
 
-export default function RootLayout() {
+export default function App() {
   return (
-    <Stack>
-      {/* <Stack.Screen name="index" component={Index} /> */}
-      {/* <Stack.Screen name="login" component={login} /> */}
-    </Stack>
+    // <NavigationContainer>
+      <Stack.Navigator initialRouteName="Splash" screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Splash" component={Splash} />
+        <Stack.Screen name="Signin" component={Signin}/>
+         <Stack.Screen name="Login" component={Login}/>
+      </Stack.Navigator>
+    // </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
