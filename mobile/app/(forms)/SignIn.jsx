@@ -3,6 +3,7 @@ import { StyleSheet,Text, TextInput, View,TouchableOpacity, Text as RNText, Keyb
 import DropDownPicker from 'react-native-dropdown-picker';
 import Login from './Login';
 import { useNavigation } from '@react-navigation/native';
+import { router } from 'expo-router';
 
 
 export default function Signin() {
@@ -69,8 +70,9 @@ const navigation = useNavigation();
           <RNText style={styles.buttonText}>Sign In</RNText>
 
         </TouchableOpacity>
-  <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-      <Text style={styles.linkText}>Login?</Text></TouchableOpacity>
+  <TouchableOpacity onPress={() => router.navigate('/(forms)/Login')}>
+      <Text style={styles.linkText}>Login?</Text>
+      </TouchableOpacity>
 
       </ScrollView>
     </KeyboardAvoidingView>

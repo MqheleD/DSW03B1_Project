@@ -1,30 +1,27 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import Splash from './SplashScreen';
-import Signin from './SignIn';
-import Login from './Login';
+import { Stack } from "expo-router";
+import { useEffect, useState } from "react";
+import SplashScreen from "./SplashScreen";
 
-const Stack = createNativeStackNavigator();
+export default function RootLayout() {
+  const [showSplash, setShowSplash] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false); //Once authentication has been done
 
-export default function App() {
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setShowSplash(false);
+    }, 3000);
+    return () => clearTimeout(timeout);
+  }, []);
+
+  if (showSplash) return <SplashScreen />;
+
   return (
-    // <NavigationContainer>
-      <Stack.Navigator initialRouteName="Splash" screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Splash" component={Splash} />
-        <Stack.Screen name="Signin" component={Signin}/>
-         <Stack.Screen name="Login" component={Login}/>
-      </Stack.Navigator>
-    // </NavigationContainer>
+    <Stack screenOptions={{ headerShown: false }}>
+      {!isAuthenticated ? (
+        <Stack.Screen name="(forms)/SignIn" />
+      ) : (
+        <Stack.Screen name="(tabs)/home" />
+      )}
+    </Stack>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
