@@ -34,7 +34,10 @@ export default function SplashScreen() {
           ]}
         />
       </View>
-      <Image style={styles.image} />
+      <Image
+        source={require("../assets/images/avijozi_cover2-removebg-preview.png")}
+        style={styles.image}
+      />
       <StatusBar style="light" />
     </View>
   );
@@ -56,5 +59,5 @@ const styles = StyleSheet.create({
   },
   pinkBlock: { backgroundColor: "#E44664", width: "50%", flex: 1 },
   whiteBlock: { backgroundColor: "#3AD6BD", flex: 1 },
-  image: { width: 250, height: 350, resizeMode: "contain", zIndex: 1 },
+  image: { width: 400, height: 400, resizeMode: "contain", zIndex: 1 },
 });
