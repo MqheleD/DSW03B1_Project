@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, StyleSheet } from "react-native";
 
-const App: React.FC = () => {
+const App = () => {
   const [selectedDay, setSelectedDay] = useState("Today");
   const [activeTab, setActiveTab] = useState("Upcoming");
 
@@ -44,100 +44,166 @@ const App: React.FC = () => {
   const hasEvents = selectedDay in events && events[selectedDay].length > 0;
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#F8F9FA", padding: 16 }}>
-      <View style={{ paddingVertical: 16 }}>
-        <Text style={{ fontSize: 24, fontWeight: "bold", color: "#333" }}>
-          Schedule
-        </Text>
-      </View>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerText}>Schedule</Text>
+        </View>
 
-      {/* Day selector */}
-      <View style={{ flexDirection: "row", marginBottom: 16 }}>
-        {["Today", "Tomorrow"].map((day) => (
-          <TouchableOpacity
-            key={day}
-            style={{
-              padding: 10,
-              borderRadius: 20,
-              marginHorizontal: 5,
-              backgroundColor: selectedDay === day ? "#007BFF" : "#E9ECEF",
-            }}
-            onPress={() => setSelectedDay(day)}
-          >
-            <Text
-              style={{
-                color: selectedDay === day ? "#FFF" : "#333",
-                fontSize: 14,
-              }}
+        {/* Day selector */}
+        <View style={styles.daySelector}>
+          {["Today", "Tomorrow"].map((day) => (
+            <TouchableOpacity
+              key={day}
+              style={[
+                styles.dayButton,
+                selectedDay === day && styles.selectedDayButton
+              ]}
+              onPress={() => setSelectedDay(day)}
             >
-              {day}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+              <Text style={[
+                styles.dayButtonText,
+                selectedDay === day && styles.selectedDayButtonText
+              ]}>
+                {day}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-      {/* Tab selector */}
-      <View style={{ flexDirection: "row", marginBottom: 16 }}>
-        {["Upcoming", "Completed"].map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            style={{
-              flex: 1,
-              padding: 10,
-              backgroundColor: activeTab === tab ? "#EAF2FF" : "#FFF",
-              alignItems: "center",
-            }}
-            onPress={() => setActiveTab(tab)}
-          >
-            <Text
-              style={{
-                color: activeTab === tab ? "#007BFF" : "#333",
-                fontSize: 14,
-              }}
+        {/* Tab selector */}
+        <View style={styles.tabSelector}>
+          {["Upcoming", "Completed"].map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              style={[
+                styles.tabButton,
+                activeTab === tab && styles.activeTabButton
+              ]}
+              onPress={() => setActiveTab(tab)}
             >
-              {tab}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+              <Text style={[
+                styles.tabButtonText,
+                activeTab === tab && styles.activeTabButtonText
+              ]}>
+                {tab}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-      {/* Events list */}
-      <ScrollView style={{ flex: 1 }}>
-        {hasEvents ? (
-          events[selectedDay].map((event) => (
-            <View
-              key={event.id}
-              style={{
-                backgroundColor: "#FFF",
-                padding: 16,
-                marginBottom: 10,
-                borderRadius: 10,
-              }}
-            >
-              <Text style={{ fontSize: 18, fontWeight: "bold", color: "#333" }}>
-                {event.title}
-              </Text>
-              <Text style={{ color: "#555", marginTop: 5 }}>
-                Time: {event.time}
-              </Text>
-              <Text style={{ color: "#555", marginTop: 5 }}>
-                Location: {event.location}
-              </Text>
-              <Text style={{ color: "#777", marginTop: 10 }}>
-                Participants: {event.participants.join(", ")}
-              </Text>
+        {/* Events list */}
+        <ScrollView style={styles.scrollView}>
+          {hasEvents ? (
+            events[selectedDay].map((event) => (
+              <View key={event.id} style={styles.eventCard}>
+                <Text style={styles.eventTitle}>{event.title}</Text>
+                <Text style={styles.eventDetail}>Time: {event.time}</Text>
+                <Text style={styles.eventDetail}>Location: {event.location}</Text>
+                <Text style={styles.eventParticipants}>
+                  Participants: {event.participants.join(", ")}
+                </Text>
+              </View>
+            ))
+          ) : (
+            <View style={styles.noEvents}>
+              <Text style={styles.noEventsText}>No events scheduled</Text>
             </View>
-          ))
-        ) : (
-          <View style={{ alignItems: "center", padding: 20 }}>
-            <Text style={{ fontSize: 18, color: "#777" }}>
-              No events scheduled
-            </Text>
-          </View>
-        )}
-      </ScrollView>
-    </View>
+          )}
+        </ScrollView>
+      </View>
+    </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#F8F9FA"
+  },
+  container: {
+    flex: 1,
+    backgroundColor: "#F8F9FA",
+    padding: 16
+  },
+  header: {
+    paddingVertical: 16
+  },
+  headerText: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#333"
+  },
+  daySelector: {
+    flexDirection: "row",
+    marginBottom: 16
+  },
+  dayButton: {
+    padding: 10,
+    borderRadius: 20,
+    marginHorizontal: 5,
+    backgroundColor: "#E9ECEF"
+  },
+  selectedDayButton: {
+    backgroundColor: "#007BFF"
+  },
+  dayButtonText: {
+    color: "#333",
+    fontSize: 14
+  },
+  selectedDayButtonText: {
+    color: "#FFF"
+  },
+  tabSelector: {
+    flexDirection: "row",
+    marginBottom: 16
+  },
+  tabButton: {
+    flex: 1,
+    padding: 10,
+    backgroundColor: "#FFF",
+    alignItems: "center"
+  },
+  activeTabButton: {
+    backgroundColor: "#EAF2FF"
+  },
+  tabButtonText: {
+    color: "#333",
+    fontSize: 14
+  },
+  activeTabButtonText: {
+    color: "#007BFF"
+  },
+  scrollView: {
+    flex: 1
+  },
+  eventCard: {
+    backgroundColor: "#FFF",
+    padding: 16,
+    marginBottom: 10,
+    borderRadius: 10
+  },
+  eventTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333"
+  },
+  eventDetail: {
+    color: "#555",
+    marginTop: 5
+  },
+  eventParticipants: {
+    color: "#777",
+    marginTop: 10
+  },
+  noEvents: {
+    alignItems: "center",
+    padding: 20
+  },
+  noEventsText: {
+    fontSize: 18,
+    color: "#777"
+  }
+});
 
 export default App;

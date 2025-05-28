@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  SafeAreaView
 } from "react-native";
 import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
 
@@ -73,7 +74,7 @@ const App = () => {
   });
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Nav Bar */}
       <View style={styles.navBar}>
         <Text style={styles.navTitle}>My Calendar</Text>
@@ -156,9 +157,9 @@ const App = () => {
                 <Text style={styles.upcomingEventText}>Conference Room A</Text>
               </View>
             </View>
-            <View style={styles.videoIconWrapper}>
+            {/* <View style={styles.videoIconWrapper}>
               <FontAwesome5 name="video" size={24} color="white" />
-            </View>
+            </View> */}
           </View>
           <TouchableOpacity style={styles.joinButton}>
             <Text style={styles.joinButtonText}>Join Now</Text>
@@ -269,7 +270,7 @@ const App = () => {
       </ScrollView>
 
       {/* Tab Bar */}
-      <View style={styles.tabBar}>
+      {/* <View style={styles.tabBar}>
         <TouchableOpacity style={styles.tabBarItem}>
           <FontAwesome5 name="home" size={20} color="#3b82f6" />
           <Text style={[styles.tabBarText, { color: "#3b82f6" }]}>Home</Text>
@@ -291,8 +292,8 @@ const App = () => {
           <FontAwesome5 name="user" size={20} color="#9ca3af" />
           <Text style={[styles.tabBarText, { color: "#6b7280" }]}>Profile</Text>
         </TouchableOpacity>
-      </View>
-    </View>
+      </View> */}
+    </SafeAreaView>
   );
 };
 
@@ -300,9 +301,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f9fafb", // gray-50
+    // paddingVertical: 16,
   },
   navBar: {
-    position: "absolute",
+    // position: "absolute",
     top: 0,
     left: 0,
     right: 0,
@@ -337,7 +339,7 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   scrollContent: {
-    paddingTop: 72,
+    paddingTop: 20,
     paddingHorizontal: 16,
     paddingBottom: 100,
   },
