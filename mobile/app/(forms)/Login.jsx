@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Text as RNText,
 } from "react-native";
-import Signin from "./SignIn";
+// import Signin from "./SignIn";
 import { useNavigation } from "@react-navigation/native";
 import { router } from "expo-router"; // Corrected import
 
