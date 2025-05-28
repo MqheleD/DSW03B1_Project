@@ -4,6 +4,8 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import Login from './Login';
 import { useNavigation } from '@react-navigation/native';
 import { router } from 'expo-router';
+import { LinearGradient } from "expo-linear-gradient";
+
 
 
 export default function Signin() {
@@ -21,6 +23,7 @@ const navigation = useNavigation();
 
 
   return (
+
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.keyboardContainer}
