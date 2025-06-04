@@ -6,8 +6,9 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  SafeAreaView
+  StatusBar
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
 
 const eventsData = {
@@ -57,7 +58,7 @@ const eventsData = {
   ],
 };
 
-const App = () => {
+export default function App() {
   const [selectedTab, setSelectedTab] = useState("Today");
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -75,17 +76,18 @@ const App = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark" />
       {/* Nav Bar */}
       <View style={styles.navBar}>
-        <Text style={styles.navTitle}>My Calendar</Text>
-        <View style={styles.navIcons}>
+        <Text style={styles.navTitle}>Home</Text>
+        {/* <View style={styles.navIcons}>
           <TouchableOpacity style={styles.iconButton}>
             <FontAwesome5 name="search" size={16} color="#4B5563" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton}>
             <FontAwesome5 name="bell" size={16} color="#4B5563" />
           </TouchableOpacity>
-        </View>
+        </View> */}
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -268,31 +270,6 @@ const App = () => {
           </View>
         </View>
       </ScrollView>
-
-      {/* Tab Bar */}
-      {/* <View style={styles.tabBar}>
-        <TouchableOpacity style={styles.tabBarItem}>
-          <FontAwesome5 name="home" size={20} color="#3b82f6" />
-          <Text style={[styles.tabBarText, { color: "#3b82f6" }]}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabBarItem}>
-          <FontAwesome5 name="calendar-alt" size={20} color="#9ca3af" />
-          <Text style={[styles.tabBarText, { color: "#6b7280" }]}>
-            Calendar
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabBarAddButton}>
-          <FontAwesome5 name="plus" size={24} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabBarItem}>
-          <FontAwesome5 name="users" size={20} color="#9ca3af" />
-          <Text style={[styles.tabBarText, { color: "#6b7280" }]}>Teams</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabBarItem}>
-          <FontAwesome5 name="user" size={20} color="#9ca3af" />
-          <Text style={[styles.tabBarText, { color: "#6b7280" }]}>Profile</Text>
-        </TouchableOpacity>
-      </View> */}
     </SafeAreaView>
   );
 };
@@ -611,5 +588,3 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
   },
 });
-
-export default App;

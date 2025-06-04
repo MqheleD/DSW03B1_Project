@@ -1,6 +1,9 @@
 import { Stack } from "expo-router";
 import { useEffect, useState } from "react";
+import { StatusBar } from "react-native";
 import SplashScreen from "./SplashScreen";
+
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 export default function RootLayout() {
   const [showSplash, setShowSplash] = useState(true);
@@ -16,12 +19,17 @@ export default function RootLayout() {
   if (showSplash) return <SplashScreen />;
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      {!isAuthenticated ? (
-        <Stack.Screen name="(forms)/SignIn" />
-      ) : (
-        <Stack.Screen name="(tabs)/home" />
-      )}
-    </Stack>
+    <>
+      <StatusBar style="auto" />
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <Stack screenOptions={{ headerShown: false }}>
+          {!isAuthenticated ? (
+            <Stack.Screen name="(forms)/Login" />
+          ) : (
+            <Stack.Screen name="(tabs)/home" />
+          )}
+        </Stack>
+      </GestureHandlerRootView>
+    </>
   );
 }

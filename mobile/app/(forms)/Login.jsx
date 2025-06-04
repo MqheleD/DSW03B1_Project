@@ -35,8 +35,11 @@ export default function Login() {
         <RNText style={styles.buttonText}>LOGIN</RNText>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => navigation.navigate("Signin")}>
-        <Text style={styles.linkText}>Sign up?</Text>
+      <TouchableOpacity style={styles.secondaryButton} onPress={() => router.navigate('/(forms)/SignIn')}>
+        <Text style={styles.secondaryButtonText}>Sign up?</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => router.navigate('/(forms)/ForgotPassword')}>
+        <Text style={styles.linkText}>Forgot Password?</Text>
       </TouchableOpacity>
     </View>
   );
@@ -83,8 +86,22 @@ const styles = StyleSheet.create({
     marginTop: 20,
     width: "90%",
   },
+  secondaryButton: {
+    backgroundColor: "#dddddd",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 10,
+    width: "90%",
+  },
   buttonText: {
     color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  secondaryButtonText: {
+    color: "black",
     fontSize: 16,
     fontWeight: "bold",
   },

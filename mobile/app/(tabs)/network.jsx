@@ -1,5 +1,6 @@
 import React from 'react';
-import {View,SafeAreaView,Text,StyleSheet,Image,ScrollView,TouchableOpacity,Linking,Alert,Modal} from 'react-native';
+import {View,Text,StyleSheet,Image,ScrollView,TouchableOpacity,Linking,Alert,Modal} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function Network() {
@@ -126,7 +127,7 @@ const styles = StyleSheet.create({
   },
   tapButton: {
     backgroundColor: "#000000",
-    marginTop: "10%",
+    // marginTop: "10%",
     alignItems: 'center',
     justifyContent: 'center',
     paddingBottom: 15,

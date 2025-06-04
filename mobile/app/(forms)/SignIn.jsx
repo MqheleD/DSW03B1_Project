@@ -1,63 +1,115 @@
 import React, { useState } from 'react';
-import { StyleSheet,Text, TextInput, View,TouchableOpacity, Text as RNText, KeyboardAvoidingView, Platform, ScrollView} from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
-import Login from './Login';
-import { useNavigation } from '@react-navigation/native';
 import { router } from 'expo-router';
-import { LinearGradient } from "expo-linear-gradient";
-
-
 
 export default function Signin() {
-
-const navigation = useNavigation();
-
-
   const [open, setOpen] = useState(false);
   const [role, setRole] = useState(null);
   const [roles, setRoles] = useState([
     { label: 'Guest', value: 'guest' },
-    { label: 'Speaker', value: 'speaker' }
+    { label: 'Speaker', value: 'speaker' },
   ]);
 
+  // Form fields
+  const [name, setName] = useState('');
+  const [surname, setSurname] = useState('');
+  const [email, setEmail] = useState('');
+  const [city, setCity] = useState('');
+  const [country, setCountry] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
+  const handleSignup = () => {
+    if (password !== confirmPassword) {
+      alert('Passwords do not match!');
+      return;
+    }
+    // TODO: Add Supabase signup logic here
+    alert('Signed up successfully!');
+  };
 
   return (
-
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.keyboardContainer}
     >
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.Heading}>SIGN UP</Text>
+        <Text style={styles.Heading}>Sign Up</Text>
 
         <View style={styles.form}>
-          {["Name", "Surname", "Email", "City", "Country"].map((field, index) => (
-            <View style={styles.row} key={index}>
-              <Text style={styles.label}>{field}:</Text>
-              <TextInput style={styles.inputfield} />
-            </View>
-          ))}
+          <View style={styles.row}>
+            <Text style={styles.label}>Name:</Text>
+            <TextInput style={styles.inputfield} value={name} onChangeText={setName} />
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Surname:</Text>
+            <TextInput style={styles.inputfield} value={surname} onChangeText={setSurname} />
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Email:</Text>
+            <TextInput
+              style={styles.inputfield}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>City:</Text>
+            <TextInput style={styles.inputfield} value={city} onChangeText={setCity} />
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Country:</Text>
+            <TextInput style={styles.inputfield} value={country} onChangeText={setCountry} />
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Password:</Text>
+            <TextInput
+              style={styles.inputfield}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              placeholder="Enter password"
+            />
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Confirm:</Text>
+            <TextInput
+              style={styles.inputfield}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+              placeholder="Confirm password"
+            />
+          </View>
         </View>
 
         <Text style={styles.dropdownLabel}>Select Role:</Text>
-
         <View style={{ zIndex: 1000, width: '90%' }}>
           <DropDownPicker
             open={open}
             value={role}
             items={roles}
             setOpen={setOpen}
-            setValue={setRole}
+            setValue={(callback) => setRole(callback(role))}
             setItems={setRoles}
             placeholder="Select Role"
             style={styles.dropdown}
             dropDownContainerStyle={styles.dropdownContainer}
-            zIndex={1000}
-            zIndexInverse={100}
             selectedItemContainerStyle={{ backgroundColor: '#ffc0cb' }}
             selectedItemLabelStyle={{
               color: 'black',
@@ -69,14 +121,13 @@ const navigation = useNavigation();
           />
         </View>
 
-        <TouchableOpacity style={styles.customButton} onPress={() => alert('Signed in!')}>
-          <RNText style={styles.buttonText}>Sign In</RNText>
-
+        <TouchableOpacity style={styles.customButton} onPress={handleSignup}>
+          <Text style={styles.buttonText}>Sign Up</Text>
         </TouchableOpacity>
-  <TouchableOpacity onPress={() => router.navigate('/(forms)/Login')}>
-      <Text style={styles.linkText}>Login?</Text>
-      </TouchableOpacity>
 
+        <TouchableOpacity onPress={() => router.navigate('/(forms)/Login')}>
+          <Text style={styles.linkText}>Already have an account? Log in</Text>
+        </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -109,7 +160,7 @@ const styles = StyleSheet.create({
     width: 80,
     fontWeight: '500',
     fontSize: 16,
-    color:'#FF4E4E'
+    color: '#FF4E4E',
   },
   inputfield: {
     flex: 1,
@@ -128,11 +179,10 @@ const styles = StyleSheet.create({
   },
   dropdown: {
     borderColor: '#000',
-    marginTop:50,
+    marginTop: 10,
   },
   dropdownContainer: {
     borderColor: '#000',
-  
   },
   customButton: {
     backgroundColor: 'black',
@@ -148,19 +198,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-   linkText: {
-     marginTop:20,
+  linkText: {
+    marginTop: 20,
     color: 'black',
     textDecorationLine: 'underline',
     fontSize: 16,
   },
 });
-
-
-
-
-
-
-
-
-
