@@ -10,6 +10,7 @@ import {
   ScrollView,
 } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 export default function Signin() {
@@ -19,15 +20,24 @@ export default function Signin() {
     { label: 'Guest', value: 'guest' },
     { label: 'Speaker', value: 'speaker' },
   ]);
+  const [show,setShow] =useState(true);
 
   // Form fields
   const [name, setName] = useState('');
   const [surname, setSurname] = useState('');
   const [email, setEmail] = useState('');
+   const [emailError, setEmailError] = useState('');
+   const [occupation,setOccupation] = useState('');
+   const [organisation,setOgarnisation] = useState('');
+  const [age,setAge] = useState('');
+const [gender,setGender] = useState('');
+const [interests,setInterets] = useState('');
+
   const [city, setCity] = useState('');
   const [country, setCountry] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false);
 
   const handleSignup = () => {
     if (password !== confirmPassword) {
@@ -38,6 +48,15 @@ export default function Signin() {
     alert('Signed up successfully!');
   };
 
+  const validateEmail = (text) => {
+  setEmail(text);
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(text)) {
+    setEmailError('*Invalid email address');
+  } else {
+    setEmailError('');
+  }}
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -47,89 +66,145 @@ export default function Signin() {
         contentContainerStyle={styles.scrollContainer}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.Heading}>Sign Up</Text>
+       <View style={styles.SignupDesign}>
+  {show ? (
+    < >
+      <Text style={styles.Heading}>Sign Up</Text>
+      <View style={styles.inputContainer}>
+      <TextInput style={styles.inputfield} placeholder="Name:" value={name} onChangeText={setName} />
+      <TextInput style={styles.inputfield} placeholder="Surname:" value={surname} onChangeText={setSurname} />
+      <TextInput style={styles.inputfield} placeholder="Occupation:" value={occupation}  onChangeText={setOccupation} />
+      <TextInput style={styles.inputfield} placeholder="Organisation:" value={organisation}  onChangeText={setOgarnisation} />
+      <TextInput style={styles.inputfield} keyboardType="numeric"  placeholder="Age:"  value={age} onChangeText={setAge} />
+      <TextInput style={styles.inputfield} value={gender}  placeholder="Gender: *Optional" onChangeText={setGender} />
+      <TouchableOpacity onPress={() => setShow(false)}style={{backgroundColor:'white',marginTop:'5%',borderRadius:20, padding:5,elevation:2}}>
+        <Ionicons name="chevron-forward-outline" size={30} color="black" />
+      </TouchableOpacity>
+      </View>
+    </>
+  ) : (
+    <>
+    <View style={styles.inputContainer}>
+      <TextInput style={styles.inputfield} value={interests} placeholder="Interests:" onChangeText={setInterets} />
+      <Text style={{color:'red'}}>{emailError}</Text>
+       <TextInput 
+            keyboardType="email-address"
+             autoCapitalize="none"
+            value={email}
+            style={styles.inputfield}
+            placeholder="Email:"
+            onChangeText={validateEmail}/>
+      
+      <View style={styles.passwordContainer}>
+  <TextInput
+    style={[{ flex: 1,}]}
+    value={password}
+    placeholder="Password:"
+    onChangeText={setPassword}
+    secureTextEntry={!passwordVisible}
+  />
+  <TouchableOpacity onPress={() => setPasswordVisible(!passwordVisible)}>
+    <Ionicons
+      name={passwordVisible ? 'eye-off' : 'eye'}
+      size={24}
+      color="gray"
+      style={styles.eyeIcon}
+    />
+  </TouchableOpacity>
+</View>
 
-        <View style={styles.form}>
-          <View style={styles.row}>
-            <Text style={styles.label}>Name:</Text>
-            <TextInput style={styles.inputfield} value={name} onChangeText={setName} />
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Surname:</Text>
-            <TextInput style={styles.inputfield} value={surname} onChangeText={setSurname} />
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Email:</Text>
-            <TextInput
-              style={styles.inputfield}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>City:</Text>
-            <TextInput style={styles.inputfield} value={city} onChangeText={setCity} />
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Country:</Text>
-            <TextInput style={styles.inputfield} value={country} onChangeText={setCountry} />
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Password:</Text>
-            <TextInput
-              style={styles.inputfield}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              placeholder="Enter password"
-            />
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Confirm:</Text>
-            <TextInput
-              style={styles.inputfield}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-              placeholder="Confirm password"
-            />
-          </View>
-        </View>
 
-        <Text style={styles.dropdownLabel}>Select Role:</Text>
-        <View style={{ zIndex: 1000, width: '90%' }}>
-          <DropDownPicker
-            open={open}
-            value={role}
-            items={roles}
-            setOpen={setOpen}
-            setValue={(callback) => setRole(callback(role))}
-            setItems={setRoles}
-            placeholder="Select Role"
-            style={styles.dropdown}
-            dropDownContainerStyle={styles.dropdownContainer}
-            selectedItemContainerStyle={{ backgroundColor: '#ffc0cb' }}
-            selectedItemLabelStyle={{
-              color: 'black',
-              fontWeight: 'bold',
-            }}
-            listItemLabelStyle={{
-              color: 'black',
-            }}
-          />
-        </View>
 
-        <TouchableOpacity style={styles.customButton} onPress={handleSignup}>
-          <Text style={styles.buttonText}>Sign Up</Text>
-        </TouchableOpacity>
+<View style={styles.passwordContainer}>
+  <TextInput
+    style={[{ flex: 1,}]}
+    value={confirmPassword}
+    placeholder="Confirm Password:"
+    onChangeText={setConfirmPassword}
+    secureTextEntry={!passwordVisible}
+  />
+  <TouchableOpacity onPress={() => setPasswordVisible(!passwordVisible)}>
+    <Ionicons
+      name={passwordVisible ? 'eye-off' : 'eye'}
+      size={24}
+      color="gray"
+      style={styles.eyeIcon}
+    />
+  </TouchableOpacity>
+</View>
 
-        <TouchableOpacity onPress={() => router.navigate('/(forms)/Login')}>
-          <Text style={styles.linkText}>Already have an account? Log in</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+
+
+
+
+
+
+      <View style={{ zIndex: 1000, width: '90%' }}>
+        <DropDownPicker
+          open={open}
+          value={role}
+          items={roles}
+          setOpen={setOpen}
+          setValue={(callback) => setRole(callback(role))}
+          setItems={setRoles}
+          placeholder="Select Role"
+          style={{
+            borderWidth: 0,
+            backgroundColor: 'white',
+            elevation: 2,
+          }}
+          dropDownContainerStyle={{
+            borderWidth: 0,
+            backgroundColor: 'white',
+            elevation: 2,
+          }}
+          selectedItemContainerStyle={{ backgroundColor: '#88A8D1' }}
+          selectedItemLabelStyle={{
+            color: 'black',
+            fontWeight: 'bold',
+          }}
+          listItemLabelStyle={{
+            color: 'black',
+          }}
+        />
+      </View>
+      <TouchableOpacity onPress={() => setShow(true)} style={{backgroundColor:'white',marginTop:'5%',borderRadius:20, padding:5,elevation:2}}>
+        <Ionicons name="chevron-back-outline" size={30} color="black" />
+      </TouchableOpacity>
+
+    
+      </View>
+       <View style={{ marginLeft: "50%", marginTop: "10%" }}>
+  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+    <Text style={{ fontSize: 16, marginRight: 5 }}>Sign Up</Text>
+    <TouchableOpacity
+      onPress={() => onPress={handleSignup}}
+      style={{
+        backgroundColor: 'black',
+        borderRadius: 20,
+        padding: 5,
+        elevation: 2,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      
+      <Ionicons name="arrow-forward" size={24} color="white" />
+    </TouchableOpacity>
+  </View>
+
+   <TouchableOpacity onPress={() => router.navigate('/(forms)/Login')}>
+     <Text style={styles.linkText}>Log in?</Text>
+  </TouchableOpacity>
+</View>
+
+    </>
+  )}
+</View>
+
+</ScrollView>
+</KeyboardAvoidingView>
   );
 }
 
@@ -140,22 +215,24 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     alignItems: 'center',
-    paddingTop: 50,
+    paddingTop: 5,
     paddingBottom: 50,
   },
   Heading: {
-    fontWeight: 'bold',
-    fontSize: 25,
-    marginBottom: 40,
-  },
+  color: "#95B2CA",
+  fontWeight: 'bold',
+  fontSize: 25,
+  marginBottom: 40,
+  textShadowColor: '#112250',
+  textShadowOffset: { width: 2, height: 1 },
+  textShadowRadius: 2,
+  elevation: 2,
+  overflow: 'visible',
+},
   form: {
     width: '90%',
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
+ 
   label: {
     width: 80,
     fontWeight: '500',
@@ -164,10 +241,14 @@ const styles = StyleSheet.create({
   },
   inputfield: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: '#000',
-    borderRadius: 5,
+    alignSelf: 'flex-start',
+    backgroundColor:"white",
+    color:"black",
+    marginLeft: '5%',
+    marginBottom:'5%',
+    width:"90%",
     padding: 8,
+    elevation:2
   },
   dropdownLabel: {
     marginTop: 20,
@@ -178,11 +259,11 @@ const styles = StyleSheet.create({
     marginLeft: '5%',
   },
   dropdown: {
-    borderColor: '#000',
+    //borderColor: '#000',
     marginTop: 10,
   },
   dropdownContainer: {
-    borderColor: '#000',
+   // borderColor: '#000',
   },
   customButton: {
     backgroundColor: 'black',
@@ -199,9 +280,48 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   linkText: {
-    marginTop: 20,
+   
     color: 'black',
     textDecorationLine: 'underline',
     fontSize: 16,
   },
+  SignupDesign:{
+    marginTop:'0%',
+     backgroundColor:"#003459",
+     width:"100%",
+     height:"50%",
+     alignItems:"center",
+    // borderTopLeftRadius:"40%",
+     borderBottomRightRadius:"10%",
+      borderBottomLeftRadius:"20%",
+     //padding:"0%"
+      paddingTop: "30%",
+      elevation: 2
+      
+     
+  },
+  inputContainer:{
+     width:'92%',
+    // height:'1000%',
+     backgroundColor:'#F3F3F3',
+     borderRadius:10,
+     elevation:2,
+     paddingTop:"10%",
+     paddingBottom:"10%",
+     alignItems:"center"
+  },
+  passwordContainer: {
+  alignSelf: 'flex-start',  
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginLeft: '5%',
+  marginBottom: '5%',
+  width: '90%', 
+  paddingHorizontal: 8,
+  backgroundColor: 'white',
+  elevation: 2,
+},
+eyeIcon: {
+  paddingHorizontal: 8,
+},
 });
