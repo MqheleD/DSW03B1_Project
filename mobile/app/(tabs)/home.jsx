@@ -10,6 +10,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+
+import { router } from 'expo-router';
 
 const eventsData = {
   Today: [
@@ -80,14 +83,11 @@ export default function App() {
       {/* Nav Bar */}
       <View style={styles.navBar}>
         <Text style={styles.navTitle}>Home</Text>
-        {/* <View style={styles.navIcons}>
-          <TouchableOpacity style={styles.iconButton}>
-            <FontAwesome5 name="search" size={16} color="#4B5563" />
+        <View style={styles.navIcons}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => router.push("/(screens)/Scanner")}>
+            <MaterialCommunityIcons name="line-scan" size={16} color="#4B5563" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <FontAwesome5 name="bell" size={16} color="#4B5563" />
-          </TouchableOpacity>
-        </View> */}
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
