@@ -14,5 +14,5 @@ export default function Index() {
     // }
   }, []);
 
-  return <SignIn />;
+  return <Login />;
 }
