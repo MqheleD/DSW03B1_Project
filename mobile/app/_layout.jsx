@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { StatusBar } from "react-native";
 import SplashScreen from "./SplashScreen";
 import { ThemeProvider } from "@/hooks/ThemeContext";
+import { AuthContext, AuthContextProvider }  from "../hooks/AuthContext"
 
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
@@ -22,18 +23,20 @@ export default function RootLayout() {
   return (
     <>
       <StatusBar style="auto" />
-      <ThemeProvider>
-        {/* The ThemeProvider will provide the theme context to all components */}
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <Stack screenOptions={{ headerShown: false }}>
-            {!isAuthenticated ? (
-              <Stack.Screen name="(forms)/Login" />
-            ) : (
-              <Stack.Screen name="(tabs)/home" />
-            )}
-          </Stack>
-        </GestureHandlerRootView>
-      </ThemeProvider>
+      <AuthContextProvider>
+        <ThemeProvider>
+          {/* The ThemeProvider will provide the theme context to all components */}
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <Stack screenOptions={{ headerShown: false }}>
+              {!isAuthenticated ? (
+                <Stack.Screen name="(forms)/Login" />
+              ) : (
+                <Stack.Screen name="(tabs)/home" />
+              )}
+            </Stack>
+          </GestureHandlerRootView>
+        </ThemeProvider>
+      </AuthContextProvider>
     </>
   );
 }
