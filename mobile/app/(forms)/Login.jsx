@@ -5,10 +5,13 @@ import {
   TextInput,
   View,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { supabase } from "../supabaseClient";
+import { UserAuth } from '@/hooks/AuthContext';
 
 export default function Login() {
   const navigation = useNavigation();
@@ -21,14 +24,31 @@ export default function Login() {
 
 
    const validateEmail = (text) => {
-  setEmail(text);
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(text)) {
-    setEmailError('*Invalid email address');
-  } else {
-    setEmailError('');
+    setEmail(text);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(text)) {
+      setEmailError('*Invalid email address');
+    } else {
+      setEmailError('');
+    }
+  };
+
+  const { session, signInUser } = UserAuth();
+  console.log(session);
+
+  //login logic
+  const handleLogin = async () => {
+     try {
+      const result = await signInUser(email, password)  
+      if (result.success) {
+        Alert.alert('Logged in successfully!');
+        router.navigate('/(tabs)/home')
+      }
+    }
+    catch (error){
+      console.log("there was an error: ", error)
+    }
   }
-};
  
 
   return (
@@ -78,7 +98,8 @@ export default function Login() {
   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
     <Text style={{ fontSize: 16, marginRight: 5 }}>Login</Text>
     <TouchableOpacity
-      onPress={() => router.navigate('/(tabs)/home')}
+      // onPress={() => router.navigate('/(tabs)/home')}
+      onPress={handleLogin}
       style={{
         backgroundColor: 'black',
         borderRadius: 20,
