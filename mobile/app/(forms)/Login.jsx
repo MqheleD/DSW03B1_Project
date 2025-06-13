@@ -9,6 +9,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { supabase } from "../supabaseClient";
 
 export default function Login() {
   const navigation = useNavigation();
@@ -29,6 +30,11 @@ export default function Login() {
     setEmailError('');
   }
 };
+
+  //login logic
+  const handleLogin = async () => {
+    
+  }
  
 
   return (
