@@ -8,12 +8,16 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { supabase } from '../supabaseClient';
+import { UserAuth } from '@/hooks/AuthContext';
 
 export default function Signin() {
+
   const [open, setOpen] = useState(false);
   const [role, setRole] = useState(null);
   const [roles, setRoles] = useState([
@@ -26,12 +30,12 @@ export default function Signin() {
   const [name, setName] = useState('');
   const [surname, setSurname] = useState('');
   const [email, setEmail] = useState('');
-   const [emailError, setEmailError] = useState('');
-   const [occupation,setOccupation] = useState('');
-   const [organisation,setOgarnisation] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [occupation,setOccupation] = useState('');
+  const [organisation,setOgarnisation] = useState('');
   const [age,setAge] = useState('');
-const [gender,setGender] = useState('');
-const [interests,setInterets] = useState('');
+  const [gender,setGender] = useState('');
+  const [interests,setInterets] = useState('');
 
   const [city, setCity] = useState('');
   const [country, setCountry] = useState('');
@@ -39,14 +43,30 @@ const [interests,setInterets] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
 
-  const handleSignup = () => {
+  const { session, signUpNewUser } = UserAuth();
+  console.log(session);
+  
+  // sign up logic
+  const handleSignup = async (e) => {
     if (password !== confirmPassword) {
-      alert('Passwords do not match!');
+      Alert.alert('Passwords do not match!');
       return;
     }
+
+    console.log("Signing in");
+
     // TODO: Add Supabase signup logic here
-    alert('Signed up successfully!');
-  };
+    try {
+      const result = await signUpNewUser(email, password)  
+      if (result.success) {
+        Alert.alert('Signed up successfully!');
+        router.navigate('/(forms)/Login')
+      }
+    }
+    catch (error){
+      console.log("there was an error: ", error)
+    }
+  }
 
   const validateEmail = (text) => {
   setEmail(text);
@@ -89,11 +109,13 @@ const [interests,setInterets] = useState('');
       <Text style={{color:'red'}}>{emailError}</Text>
        <TextInput 
             keyboardType="email-address"
-             autoCapitalize="none"
+            autoCapitalize="none"
             value={email}
             style={styles.inputfield}
             placeholder="Email:"
-            onChangeText={validateEmail}/>
+            onChangeText={(text) => {
+    setEmail(text);  // Update the email state when the user types
+    validateEmail(text)}}/>
       
       <View style={styles.passwordContainer}>
   <TextInput
@@ -179,7 +201,7 @@ const [interests,setInterets] = useState('');
   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
     <Text style={{ fontSize: 16, marginRight: 5 }}>Sign Up</Text>
     <TouchableOpacity
-      onPress={() => onPress={handleSignup}}
+      onPress={handleSignup}
       style={{
         backgroundColor: 'black',
         borderRadius: 20,
