@@ -98,8 +98,8 @@ export default function Login() {
   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
     <Text style={{ fontSize: 16, marginRight: 5 }}>Login</Text>
     <TouchableOpacity
-      // onPress={() => router.navigate('/(tabs)/home')}
-      onPress={handleLogin}
+      onPress={() => router.navigate('/(tabs)/home')}
+      // onPress={handleLogin}
       style={{
         backgroundColor: 'black',
         borderRadius: 20,
