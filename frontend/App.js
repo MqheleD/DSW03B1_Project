@@ -331,29 +331,29 @@ const RoomDetailModal = ({ room, visible, onClose }) => {
         <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
           {/* Room Status Overview */}
           <View style={styles.statusOverview}>
-            <StatCard 
-              title="Current Occupancy" 
+            <StatCard
+              title="Current Occupancy"
               value={`${room.currentAttendees}/${room.capacity}`}
-              subtitle={`${Math.round((room.currentAttendees/room.capacity)*100)}% Full`}
+              subtitle={`${Math.round((room.currentAttendees / room.capacity) * 100)}% Full`}
               color="#FF1493"
               icon="👥"
             />
-            <StatCard 
-              title="Satisfaction Score" 
+            <StatCard
+              title="Satisfaction Score"
               value={`${room.satisfactionScore}/5.0`}
               subtitle="Real-time Rating"
               color="#C71585"
               icon="⭐"
             />
-            <StatCard 
-              title="Avg Session Time" 
+            <StatCard
+              title="Avg Session Time"
               value={room.avgSessionTime}
               subtitle="Per Attendee"
               color="#FF69B4"
               icon="⏱️"
             />
-            <StatCard 
-              title="Environment" 
+            <StatCard
+              title="Environment"
               value={`${room.temperature}°C`}
               subtitle={`${room.soundLevel} Sound`}
               color="#FFB6C1"
@@ -433,11 +433,11 @@ const RoomDetailModal = ({ room, visible, onClose }) => {
                 </Text>
                 <View style={styles.scoreContainer}>
                   <View style={styles.scoreBar}>
-                    <View 
+                    <View
                       style={[
-                        styles.scoreFill, 
-                        { width: `${(score/5)*100}%` }
-                      ]} 
+                        styles.scoreFill,
+                        { width: `${(score / 5) * 100}%` }
+                      ]}
                     />
                   </View>
                   <Text style={styles.scoreText}>{score}</Text>
@@ -482,8 +482,10 @@ const RoomDetailModal = ({ room, visible, onClose }) => {
               {room.issues.map((issue, idx) => (
                 <View key={idx} style={[
                   styles.issueCard,
-                  { borderLeftColor: issue.severity === 'High' ? '#FF4444' : 
-                    issue.severity === 'Medium' ? '#FF8800' : '#44FF44' }
+                  {
+                    borderLeftColor: issue.severity === 'High' ? '#FF4444' :
+                      issue.severity === 'Medium' ? '#FF8800' : '#44FF44'
+                  }
                 ]}>
                   <View style={styles.issueHeader}>
                     <Text style={styles.issueType}>{issue.type}</Text>
@@ -553,29 +555,29 @@ const Dashboard = () => {
       </View>
 
       <View style={styles.statsGrid}>
-        <StatCard 
-          title="Total Attendees" 
+        <StatCard
+          title="Total Attendees"
           value={data.overallStats.totalAttendees.toLocaleString()}
-          subtitle={`${Math.round((data.overallStats.totalAttendees/data.overallStats.totalCapacity)*100)}% Capacity`}
+          subtitle={`${Math.round((data.overallStats.totalAttendees / data.overallStats.totalCapacity) * 100)}% Capacity`}
           color="#FF1493"
           icon="👥"
         />
-        <StatCard 
-          title="Active Rooms" 
+        <StatCard
+          title="Active Rooms"
           value={`${data.overallStats.activeRooms}`}
           subtitle={`${data.overallStats.totalSessions} Sessions`}
           color="#C71585"
           icon="🏢"
         />
-        <StatCard 
-          title="Avg Satisfaction" 
+        <StatCard
+          title="Avg Satisfaction"
           value={`${data.overallStats.averageSatisfaction.toFixed(1)}/5.0`}
           subtitle="Across All Rooms"
           color="#FF69B4"
           icon="⭐"
         />
-        <StatCard 
-          title="Revenue Today" 
+        <StatCard
+          title="Revenue Today"
           value={data.overallStats.totalRevenue}
           subtitle="Peak Hour: 9:00 AM"
           color="#FFB6C1"
@@ -585,29 +587,29 @@ const Dashboard = () => {
 
       {/* Additional Stats Row */}
       <View style={styles.statsGrid}>
-        <StatCard 
-          title="Check-ins Today" 
+        <StatCard
+          title="Check-ins Today"
           value={data.overallStats.checkIns.toLocaleString()}
           subtitle={`${data.overallStats.dailyGrowth} vs yesterday`}
           color="#FF1493"
           icon="📥"
         />
-        <StatCard 
-          title="Avg Dwell Time" 
+        <StatCard
+          title="Avg Dwell Time"
           value={data.overallStats.avgDwellTime}
           subtitle="Per Attendee"
           color="#C71585"
           icon="⏰"
         />
-        <StatCard 
-          title="Peak Attendance" 
+        <StatCard
+          title="Peak Attendance"
           value="487"
           subtitle="9:00 AM - Main Auditorium"
           color="#FF69B4"
           icon="📈"
         />
-        <StatCard 
-          title="Live Attendees" 
+        <StatCard
+          title="Live Attendees"
           value={data.overallStats.totalAttendees - data.overallStats.checkOuts}
           subtitle={`${data.overallStats.checkOuts} departed`}
           color="#FFB6C1"
@@ -621,7 +623,7 @@ const Dashboard = () => {
           data={{
             labels: data.rooms.map(r => r.name.split(' ')[0]),
             datasets: [{
-              data: data.rooms.map(r => Math.round((r.currentAttendees/r.capacity)*100)),
+              data: data.rooms.map(r => Math.round((r.currentAttendees / r.capacity) * 100)),
             }],
           }}
           width={screenWidth - 60}
@@ -694,8 +696,8 @@ const Dashboard = () => {
       </View>
 
       {data.rooms.map((room) => (
-        <TouchableOpacity 
-          key={room.id} 
+        <TouchableOpacity
+          key={room.id}
           style={styles.advancedRoomCard}
           onPress={() => openRoomDetails(room)}
         >
@@ -737,10 +739,10 @@ const Dashboard = () => {
           </View>
 
           <View style={styles.utilizationBar}>
-            <View 
+            <View
               style={[
-                styles.utilizationFill, 
-                { 
+                styles.utilizationFill,
+                {
                   width: `${Math.min(100, (room.currentAttendees / room.capacity) * 100)}%`,
                   backgroundColor: room.currentAttendees > room.capacity * 0.8 ? '#FF1493' : '#C71585'
                 }
@@ -801,10 +803,10 @@ const Dashboard = () => {
       {selectedTab === 'overview' ? renderOverview() : renderRooms()}
 
       {/* Room Detail Modal */}
-      <RoomDetailModal 
-        room={selectedRoom} 
-        visible={modalVisible} 
-        onClose={closeRoomDetails} 
+      <RoomDetailModal
+        room={selectedRoom}
+        visible={modalVisible}
+        onClose={closeRoomDetails}
       />
     </SafeAreaView>
   );

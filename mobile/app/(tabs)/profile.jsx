@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
     View,
     Text,
@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import {ThemeContext} from "../../hooks/ThemeContext"; 
 
 import { router } from 'expo-router';
 
@@ -20,6 +21,8 @@ const { width } = Dimensions.get('window');
 export default function ProfileScreen() {
     const [expandedInterests, setExpandedInterests] = useState(true);
     const [expandedContact, setExpandedContact] = useState(true);
+
+    const {currentColors, isDarkMode} = useContext(ThemeContext);
 
     const interests = [
         { id: 1, name: '2D Animation', active: false },
@@ -31,14 +34,17 @@ export default function ProfileScreen() {
         { id: 8, name: 'Game Development', active: true },
     ];
 
+    const bannerColor = currentColors.secondaryButton.replace("#",""); // Use primary button color for banner
+
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
             <StatusBar barStyle="light-content" />
 
             {/* Banner Image */}
             <Image
             // The banner image will change based on the event
-                source={{ uri: 'https://placehold.co/600x200/3b82f6/ffffff/png?text=AVIJOZI25' }}
+                source={{ uri: `https://placehold.co/600x200/${bannerColor}/ffffff/png?text=AVIJOZI25` }}
+
                 style={styles.bannerImage}
                 resizeMode="cover"
             />
@@ -53,60 +59,40 @@ export default function ProfileScreen() {
                 />
                 <View style={styles.buttonContainer}>
 
-                    <TouchableOpacity style={styles.editProfileButton}>
+                    <TouchableOpacity style={[styles.editProfileButton, { backgroundColor: currentColors.primaryButton }]} >
                         <Text style={styles.editProfileButtonText}>Share profile</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.editProfileButton} onPress={() => router.push('/(screens)/Settings')}>
-                        <Text style={styles.editProfileButtonText}>Edit profile</Text>
+                    <TouchableOpacity style={[styles.editProfileButton, {backgroundColor: currentColors.secondaryButton}]} onPress={() => router.push('/(screens)/Settings')}>
+                        <Text style={[styles.editProfileButtonText, {color: currentColors.textPrimary}]}>Edit profile</Text>
                     </TouchableOpacity>
                 </View>
             </View>
 
             <ScrollView style={styles.contentContainer} contentContainerStyle={{ paddingBottom: 60 }}>
                 {/* User Info Section */}
-                <View style={styles.userInfoContainer}>
-                    <Text style={styles.userName}>Thabo Mbeki</Text>
-                    <Text style={styles.userHandle}>@thabo_animator</Text>
-                    <Text style={styles.userBio}>
+                <View style={[styles.userInfoContainer, { backgroundColor: currentColors.cardBackground, borderColor: currentColors.secondaryButton }]}>
+                    <Text style={[styles.userName, {color: currentColors.textPrimary}]}>Thabo Mbeki</Text>
+                    <Text style={[styles.userHandle, {color: currentColors.textSecondary}]}>@thabo_animator</Text>
+                    <Text style={[styles.userBio, {color: currentColors.textPrimary}]}>
                         I don't know if this section is necessary
                     </Text>
 
                     <View style={styles.userStats}>
                         <View style={styles.statItem}>
                             <Text style={styles.statNumber}>142</Text>
-                            <Text style={styles.statLabel}>Connections</Text>
+                            <Text style={[styles.statLabel, {color: currentColors.textSecondary}]}>Connections</Text>
                         </View>
  
                         <View style={styles.statItem}>
                             <Text style={styles.statNumber}>24</Text>
-                            <Text style={styles.statLabel}>Events</Text>
+                            <Text style={[styles.statLabel, {color: currentColors.textSecondary}]}>Events</Text>
                         </View>
                     </View>
                 </View>
 
                 {/* Interests Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Professional Interests</Text>
-                    {/* <View style={styles.chipWrap}>
-                        {interests.map((interest) => (
-                            <View
-                                key={interest.id}
-                                style={[
-                                    styles.chip,
-                                    interest.active ? styles.chipActive : styles.chipInactive,
-                                ]}
-                            >
-                                <Text
-                                    style={[
-                                        styles.chipText,
-                                        interest.active ? styles.textActive : styles.textInactive,
-                                    ]}
-                                >
-                                    {interest.name}
-                                </Text>
-                            </View>
-                        ))}
-                    </View> */}
+                <View style={[styles.section, { backgroundColor: currentColors.cardBackground, borderColor: currentColors.secondaryButton }]}>
+                    <Text style={[styles.sectionTitle, {color: currentColors.textPrimary}]}>Professional Interests</Text>
 
                     <ScrollView
                         horizontal
@@ -135,21 +121,23 @@ export default function ProfileScreen() {
                 </View>
 
                 {/* Festival Schedule */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>My Festival Schedule</Text>
+                                <View style={[styles.section, { backgroundColor: currentColors.cardBackground, borderColor: currentColors.secondaryButton }]}>
+
+                    <Text style={[styles.sectionTitle, {color: currentColors.textPrimary}]}>My Festival Schedule</Text>
                     <View style={styles.scheduleItem}>
                         <FontAwesome5 name="calendar-day" size={16} color="#3b82f6" />
-                        <Text style={styles.scheduleText}>Day 1: Animation Track</Text>
+                        <Text style={[styles.scheduleText, {color: currentColors.textSecondary}]}>Day 1: Animation Track</Text>
                     </View>
                     <View style={styles.scheduleItem}>
                         <FontAwesome5 name="bookmark" size={16} color="#3b82f6" />
-                        <Text style={styles.scheduleText}>Saved: "AI in African Animation" (2PM)</Text>
+                        <Text style={[styles.scheduleText, {color: currentColors.textSecondary}]}>Saved: "AI in African Animation" (2PM)</Text>
                     </View>
                 </View>
 
                 {/* Recent Activity */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Recent Activity</Text>
+                                <View style={[styles.section, { backgroundColor: currentColors.cardBackground, borderColor: currentColors.secondaryButton }]}>
+
+                    <Text style={[styles.sectionTitle, {color: currentColors.textPrimary}]}>Recent Activity</Text>
                     <View style={styles.activityItem}>
                         <FontAwesome5 name="heart" size={16} color="#ef4444" />
                         <View style={styles.activityContent}>
@@ -214,7 +202,7 @@ const styles = StyleSheet.create({
     },
     editProfileButtonText: {
         fontWeight: 'bold',
-        color: '#1f2937',
+        color: 'white',
     },
     contentContainer: {
         flex: 1,
@@ -229,6 +217,9 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         borderBottomLeftRadius: 12,
         borderBottomRightRadius: 12,
+        borderBottomWidth: 3,
+        borderRightWidth: 3,
+        borderLeftWidth: 3,
         padding: 20,
     },
     userName: {
@@ -267,8 +258,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         padding: 16,
         marginBottom: 16,
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
+        borderWidth: 3,
     },
     sectionTitle: {
         fontSize: 18,

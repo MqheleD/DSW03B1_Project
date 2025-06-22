@@ -2,8 +2,14 @@ import { Tabs } from "expo-router";
 import { Platform, StyleSheet, View } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { ThemeContext } from "../../hooks/ThemeContext";
+import React, { useContext } from "react";
+
 
 export default function TabsLayout() {
+
+  const {currentColors} = useContext(ThemeContext);
+
   return (
     <Tabs
       screenOptions={{
@@ -14,7 +20,7 @@ export default function TabsLayout() {
           left: 20,
           right: 20,
           elevation: 10,
-          backgroundColor: "#fff",
+          backgroundColor: currentColors.navBarBackground, // Use the card background color from the theme
           borderRadius: 30,
           height: 70,
           shadowColor: "#000",
@@ -22,9 +28,10 @@ export default function TabsLayout() {
           shadowOpacity: 0.1,
           shadowRadius: 10,
           paddingBottom: Platform.OS === "android" ? 10 : 20,
+          marginHorizontal: 10,
         },
-        tabBarActiveTintColor: "#1E90FF", // DodgerBlue or preferred highlight
-        tabBarInactiveTintColor: "#444",
+        tabBarActiveTintColor: currentColors.primaryButton, // DodgerBlue or preferred highlight
+        tabBarInactiveTintColor: currentColors.secondaryButton,
       }}
     >
       <Tabs.Screen

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Linking, Modal, Pressable } from 'react-native';
-import { CameraView } from 'expo-camera';
+import { StyleSheet, View, Text, TouchableOpacity, Linking, Modal, Pressable, Button } from 'react-native';
+import { CameraView, Camera } from 'expo-camera';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 
 export default function Scanner() {
   const [hasPermission, setHasPermission] = useState(null);
@@ -9,10 +10,13 @@ export default function Scanner() {
   const [scannedData, setScannedData] = useState('');
   const [torchOn, setTorchOn] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const navigator = useNavigation();
 
   useEffect(() => {
     (async () => {
-      const { status } = await CameraView.requestCameraPermissionsAsync();
+      // const { status } = await CameraView.requestCameraPermissionsAsync();
+      const { status } = await Camera.requestCameraPermissionsAsync();
+
       setHasPermission(status === 'granted');
     })();
   }, []);
@@ -47,13 +51,16 @@ export default function Scanner() {
     setModalVisible(false);
   };
 
-  if (hasPermission === null) {
-    return (
-      <View style={styles.permissionContainer}>
-        <Text>Requesting for camera permission</Text>
-      </View>
-    );
-  }
+  // if (hasPermission === null) {
+  //   return (
+  //     <View style={styles.permissionContainer}>
+  //       <Text>Requesting for camera permission</Text>
+  //       <Button title="Request Permission" 
+  //         onPress={() => Camera.requestCameraPermissionsAsync()} 
+  //         />
+  //     </View>
+  //   );
+  // }
 
   if (hasPermission === false) {
     return (
@@ -79,6 +86,13 @@ export default function Scanner() {
       >
         <View style={styles.overlay}>
           <View style={styles.topOverlay}>
+            <Pressable onPress={() => navigator.goBack()}>
+              <MaterialIcons
+                name="arrow-back"
+                size={30}
+                color="white"
+              />
+            </Pressable>
             <Text style={styles.title}>Scan QR Code</Text>
           </View>
 
@@ -168,9 +182,11 @@ const styles = StyleSheet.create({
   },
   topOverlay: {
     flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
     alignItems: 'center',
-    justifyContent: 'flex-start',
     paddingTop: 40,
+
   },
   title: {
     fontSize: 24,

@@ -1,71 +1,111 @@
-import { createContext, useEffect, useState, useContext } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/app/supabaseClient";
 
-const AuthContext = createContext()
+export const AuthContext = createContext();
 
-export const AuthContextProvider = ({children}) => {
-    const [session, setSession] = useState("unefined")
+export const AuthContextProvider = ({ children }) => {
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
 
-    // sign in logic for supabase
-    const signUpNewUser = async ( email, password ) => {
-        const { data, error } = await supabase.auth.signUp({
-            email: email,
-            password: password,
-        });
+  // 🔒 Load session and profile from AsyncStorage on mount
+  useEffect(() => {
+    const loadStoredData = async () => {
+      const storedSession = await AsyncStorage.getItem('session');
+      const storedProfile = await AsyncStorage.getItem('profile');
 
-        if(error){
-            console.log("There was an error siging up")
-            return {success: false, error}
-        }
-        return {success: true, data}
+      if (storedSession) setSession(JSON.parse(storedSession));
+      if (storedProfile) setProfile(JSON.parse(storedProfile));
     };
 
-    useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session)
-        });
+    loadStoredData();
 
-        supabase.auth.onAuthStateChange((_event, session) => {
-            setSession(session)
-        });
-    }, []);
+    // 🔄 Realtime auth updates
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (newSession) {
+        setSession(newSession);
+        AsyncStorage.setItem('session', JSON.stringify(newSession));
+      } else {
+        setSession(null);
+        setProfile(null);
+        AsyncStorage.removeItem('session');
+        AsyncStorage.removeItem('profile');
+      }
+    });
 
-    // sign in
-    const signInUser = async ( email, password ) => {
-        try {
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email: email,
-                password: password,
-            });
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
 
-            if (error) {
-                console.log("Sign in error: ", error)
-                return { success: false, error: error.message}
-            }
-            console.log("Sign in success: ", data)
-            return { success: true, data}
-        } 
-        
-        catch (error) {
-            console.log("AN error occured: ", error)
-        }
+  // 🔑 Login and fetch profile
+  const signInUser = async (email, password) => {
+    try {
+      const { data: signInData, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        console.log("❌ Sign-in error:", error.message);
+        return { success: false, message: error.message };
+      }
+
+      const { data: profileData, error: profileError } = await supabase
+        .from('attendees')
+        .select('*')
+        .eq('id', signInData.user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.log("⚠️ Profile fetch error:", profileError.message);
+        return { success: false, message: "Could not load profile." };
+      }
+
+      setSession(signInData.session);
+      setProfile(profileData);
+
+      await AsyncStorage.setItem('session', JSON.stringify(signInData.session));
+      await AsyncStorage.setItem('profile', JSON.stringify(profileData));
+
+      return { success: true, profile: profileData };
+    } catch (error) {
+      console.log("🛑 Unexpected login error:", error);
+      return { success: false, message: "An unexpected error occurred." };
+    }
+  };
+
+  // 🔐 Sign up
+  const signUpNewUser = async (email, password) => {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+
+    if (error) {
+      console.log("❌ Sign-up error:", error.message);
+      return { success: false, message: error.message };
     }
 
-    const signOut = () => {
-        const {error} = supabase.auth.signOut();
+    return { success: true, data };
+  };
 
-        if (error) {
-            console.log("ther was an error: ", error)
-        }
+  // 🚪 Logout
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.log("❌ Logout error:", error.message);
+    } else {
+      setSession(null);
+      setProfile(null);
+      await AsyncStorage.removeItem('session');
+      await AsyncStorage.removeItem('profile');
     }
+  };
 
-    return(
-        <AuthContext.Provider value = {{ session, signUpNewUser, signInUser, signOut }}>
-            {children}
-        </AuthContext.Provider>
-    )
-}
+  return (
+    <AuthContext.Provider value={{ session, profile, signInUser, signOut, signUpNewUser }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
 
-export const UserAuth = () => {
-    return useContext(AuthContext)
-}
+export const UserAuth = () => useContext(AuthContext);

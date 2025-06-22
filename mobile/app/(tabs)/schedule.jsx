@@ -1,10 +1,15 @@
-import React, { useState } from "react";
+import React, { useState,useContext } from "react";
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+
+import {ThemeContext} from "../../hooks/ThemeContext"; 
 
 const App = () => {
   const [selectedDay, setSelectedDay] = useState("Today");
   const [activeTab, setActiveTab] = useState("Upcoming");
+
+  const {currentColors} = useContext(ThemeContext);
 
   // Mock data for events
   const events = {
@@ -45,10 +50,10 @@ const App = () => {
   const hasEvents = selectedDay in events && events[selectedDay].length > 0;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: currentColors.background }]}>
+      <View style={[styles.container, { backgroundColor: currentColors.background }]}>
         <View style={styles.header}>
-          <Text style={styles.headerText}>Schedule</Text>
+          <Text style={[styles.headerText, {color: currentColors.textPrimary}]}>Schedule</Text>
         </View>
 
         {/* Day selector */}
@@ -58,7 +63,7 @@ const App = () => {
               key={day}
               style={[
                 styles.dayButton,
-                selectedDay === day && styles.selectedDayButton
+                selectedDay === day && [styles.selectedDayButton, { backgroundColor: currentColors.primaryButton }]
               ]}
               onPress={() => setSelectedDay(day)}
             >
@@ -78,13 +83,13 @@ const App = () => {
             <TouchableOpacity
               key={tab}
               style={[
-                styles.tabButton,
-                activeTab === tab && styles.activeTabButton
+                [styles.tabButton, { backgroundColor: currentColors.cardBackground }],
+                activeTab === tab && [styles.activeTabButton, { backgroundColor: currentColors.secondaryButton }]
               ]}
               onPress={() => setActiveTab(tab)}
             >
               <Text style={[
-                styles.tabButtonText,
+                {color: currentColors.textPrimary},
                 activeTab === tab && styles.activeTabButtonText
               ]}>
                 {tab}
@@ -97,11 +102,11 @@ const App = () => {
         <ScrollView style={styles.scrollView}>
           {hasEvents ? (
             events[selectedDay].map((event) => (
-              <View key={event.id} style={styles.eventCard}>
-                <Text style={styles.eventTitle}>{event.title}</Text>
-                <Text style={styles.eventDetail}>Time: {event.time}</Text>
-                <Text style={styles.eventDetail}>Location: {event.location}</Text>
-                <Text style={styles.eventParticipants}>
+              <View key={event.id} style={[styles.eventCard, { backgroundColor: currentColors.cardBackground }]}>
+                <Text style={[styles.eventTitle, {color: currentColors.textPrimary}]}>{event.title}</Text>
+                <Text style={[styles.eventDetail, {color: currentColors.textSecondary}]}>Time: {event.time}</Text>
+                <Text style={[styles.eventDetail, {color: currentColors.textSecondary}]}>Location: {event.location}</Text>
+                <Text style={[styles.eventParticipants, {color: currentColors.textSecondary}]}>
                   Participants: {event.participants.join(", ")}
                 </Text>
               </View>
@@ -120,11 +125,11 @@ const App = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F8F9FA"
+    // backgroundColor: "#F8F9FA"
   },
   container: {
     flex: 1,
-    backgroundColor: "#F8F9FA",
+    // backgroundColor: "#F8F9FA",
     padding: 16
   },
   header: {
@@ -173,7 +178,7 @@ const styles = StyleSheet.create({
     fontSize: 14
   },
   activeTabButtonText: {
-    color: "#007BFF"
+    color: "white"
   },
   scrollView: {
     flex: 1

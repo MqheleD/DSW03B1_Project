@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -6,24 +6,30 @@ import {
   View,
   TouchableOpacity,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { supabase } from "../supabaseClient";
 import { UserAuth } from '@/hooks/AuthContext';
 
 export default function Login() {
-  const navigation = useNavigation();
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [name,setName]=useState('');
-  const [surname,setSurnameName]=useState('');
-  const [email,setEmail]=useState('');
-  const [emailError, setEmailError] = useState('');
 
+  const { session, signInUser } = UserAuth();
 
-   const validateEmail = (text) => {
+  useEffect(() => {
+    if (session) {
+      router.replace('/(tabs)/home'); // 🚀 already logged in
+    }
+  }, [session]);
+
+  const validateEmail = (text) => {
     setEmail(text);
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(text)) {
@@ -33,111 +39,112 @@ export default function Login() {
     }
   };
 
-  const { session, signInUser } = UserAuth();
-  console.log(session);
-
-  //login logic
-  const handleLogin = async () => {
-     try {
-      const result = await signInUser(email, password)  
-      if (result.success) {
-        Alert.alert('Logged in successfully!');
-        router.navigate('/(tabs)/home')
-      }
-    }
-    catch (error){
-      console.log("there was an error: ", error)
-    }
+const handleLogin = async () => {
+  if (!email || !password) {
+    Alert.alert('Please fill in both email and password.');
+    return;
   }
- 
+
+  try {
+    const result = await signInUser(email, password);
+    if (result.success) {
+      const fullName = result.profile.full_name || result.profile.name || 'User';
+      // Alert.alert(`Welcome back, ${fullName}!`);
+      router.replace('/(tabs)/home');
+    } else {
+      Alert.alert('Login failed', result.message || 'Invalid credentials.');
+    }
+  } catch (error) {
+    Alert.alert('Login failed', error.message || 'An unexpected error occurred.');
+  }
+};
+
 
   return (
-    <View style={styles.container}>
-      
-      <View style={styles.SignupDesign}>
-        <Text style={styles.Heading}>LOGIN</Text>
-        <View style={styles.inputContainer}>
-          <TextInput value={name} style={styles.inputfield} placeholder="Name:"  onChangeText={setName}/>
-          <TextInput value={surname} style={styles.inputfield} placeholder="Surname:"  onChangeText={setSurnameName} />
-          <Text  style={{color:'red'}}>{emailError}</Text>
-          <TextInput 
-            keyboardType="email-address"
-             autoCapitalize="none"
-            value={email}
-            style={styles.inputfield}
-            placeholder="Email:"
-            onChangeText={validateEmail}/>
-       
-  <View style={styles.passwordContainer}>
-  <TextInput
-    style={[{ flex: 1,}]}
-    value={password}
-    placeholder="Password:"
-    onChangeText={setPassword}
-    secureTextEntry={!passwordVisible}
-  />
-  <TouchableOpacity onPress={() => setPasswordVisible(!passwordVisible)}>
-    <Ionicons
-      name={passwordVisible ? 'eye-off' : 'eye'}
-      size={24}
-      color="gray"
-      style={styles.eyeIcon}
-    />
-  </TouchableOpacity>
-</View>
-
-  
-
-      <TouchableOpacity onPress={() => router.navigate('/(forms)/ForgotPassword')}>
-      <Text style={styles.linkText}>Forgot Password?</Text>
-       </TouchableOpacity>
-        </View>
-      </View>
-
-  <View style={{ marginLeft: "50%", marginTop: "64%" }}>
-  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-    <Text style={{ fontSize: 16, marginRight: 5 }}>Login</Text>
-    <TouchableOpacity
-      onPress={() => router.navigate('/(tabs)/home')}
-      // onPress={handleLogin}
-      style={{
-        backgroundColor: 'black',
-        borderRadius: 20,
-        padding: 5,
-        elevation: 2,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
     >
-      
-      <Ionicons name="arrow-forward" size={24} color="white" />
-    </TouchableOpacity>
-  </View>
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.SignupDesign}>
+          <Text style={styles.Heading}>LOGIN</Text>
+          <View style={styles.inputContainer}>
+            <Text style={{ color: 'red' }}>{emailError}</Text>
+            <TextInput
+              keyboardType="email-address"
+              autoCapitalize="none"
+              placeholder="Email:"
+              placeholderTextColor="gray"
+              value={email}
+              style={styles.inputfield}
+              onChangeText={validateEmail}
+            />
 
-   <TouchableOpacity onPress={() => router.navigate('/(forms)/SignIn')}>
-     <Text style={styles.linkText}>Sign up?</Text>
-  </TouchableOpacity>
- 
-</View>
-    </View>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={{ flex: 1 }}
+                value={password}
+                placeholder="Password:"
+                placeholderTextColor="gray"
+                onChangeText={setPassword}
+                secureTextEntry={!passwordVisible}
+              />
+              <TouchableOpacity onPress={() => setPasswordVisible(!passwordVisible)}>
+                <Ionicons
+                  name={passwordVisible ? 'eye-off' : 'eye'}
+                  size={24}
+                  color="gray"
+                  style={styles.eyeIcon}
+                />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity onPress={() => router.navigate('/(forms)/ForgotPassword')}>
+              <Text style={styles.linkText}>Forgot Password?</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.buttonWrapper}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={{ fontSize: 16, marginRight: 5 }}>Login</Text>
+            <TouchableOpacity onPress={handleLogin} style={styles.loginButton}>
+              <Ionicons name="arrow-forward" size={24} color="white" />
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity onPress={() => router.navigate('/(forms)/SignIn')}>
+            <Text style={styles.linkText}>Sign up?</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1, 
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  scrollContainer: {
+    flexGrow: 1,
     justifyContent: 'flex-start',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    paddingBottom: 40,
   },
   SignupDesign: {
     backgroundColor: '#003459',
     width: '100%',
-    height: '50%',
+    height: '60%',
     alignItems: 'center',
     borderBottomRightRadius: '10%',
-    borderBottomLeftRadius: '20%',
-    paddingTop: '30%',
+    borderBottomLeftRadius: '10%',
+    paddingTop: '50%',
     elevation: 2,
   },
   Heading: {
@@ -169,58 +176,37 @@ const styles = StyleSheet.create({
     padding: 8,
     elevation: 2,
   },
-  buttonGroup: {
-    marginTop: 30,
+  passwordContainer: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: '5%',
+    marginBottom: '5%',
     width: '90%',
-    alignItems: 'center',
+    paddingHorizontal: 8,
+    backgroundColor: 'white',
+    elevation: 2,
   },
-  customButton: {
-    backgroundColor: 'black',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 10,
-    width: '100%',
-  },
-  secondaryButton: {
-    backgroundColor: '#dddddd',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 10,
-    width: '100%',
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  secondaryButtonText: {
-    color: 'black',
-    fontSize: 16,
-    fontWeight: 'bold',
+  eyeIcon: {
+    paddingHorizontal: 8,
   },
   linkText: {
     color: 'black',
     textDecorationLine: 'underline',
     fontSize: 16,
   },
-  passwordContainer: {
-  alignSelf: 'flex-start',  
-  flexDirection: 'row',
-  alignItems: 'center',
-  marginLeft: '5%',
-  marginBottom: '5%',
-  width: '90%', 
-  paddingHorizontal: 8,
-  backgroundColor: 'white',
-  elevation: 2,
-},
-eyeIcon: {
-  paddingHorizontal: 8,
-},
+  buttonWrapper: {
+    width: '100%',
+    alignItems: 'flex-end',
+    marginTop: 20,
+    paddingRight: '5%',
+  },
+  loginButton: {
+    backgroundColor: 'black',
+    borderRadius: 20,
+    padding: 5,
+    elevation: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
-
-

@@ -25,7 +25,7 @@ export default function Signin() {
   ]);
 
   const [openInterest, setOpenInterest] = useState(false);
-  const [interest, setInterest] = useState(null);
+  // const [interest, setInterest] = useState(null);
   const [interestsList, setInterestsList] = useState([
     { label: '3D animation', value: '3D animation' },
     { label: 'AI integration', value: 'AI integration' },
@@ -41,10 +41,10 @@ export default function Signin() {
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [occupation, setOccupation] = useState('');
-  const [organisation, setOgarnisation] = useState('');
+  const [organisation, setOrganisation] = useState('');
   const [age, setAge] = useState('');
   const [gender, setGender] = useState('');
-  const [interests, setInterets] = useState('');
+  const [interests, setInterests] = useState([]); // Changed to array since multiple interests possible
   const [city, setCity] = useState('');
   const [country, setCountry] = useState('');
   const [password, setPassword] = useState('');
@@ -52,28 +52,133 @@ export default function Signin() {
   const [passwordVisible, setPasswordVisible] = useState(false);
 
   const { session, signUpNewUser } = UserAuth();
-  console.log(session);
-  
+  // console.log(session);
+
   // sign up logic
-  const handleSignup = async (e) => {
-    if (password !== confirmPassword) {
-      Alert.alert('Passwords do not match!');
-      return;
-    }
+  // const handleSignup = async (e) => {
+  //   if (password !== confirmPassword) {
+  //     Alert.alert('Passwords do not match!');
+  //     return;
+  //   }
 
-    console.log("Signing in");
+  //   console.log("Signing in");
 
-    try {
-      const result = await signUpNewUser(email, password)  
-      if (result.success) {
-        Alert.alert('Signed up successfully!');
-        router.navigate('/(forms)/Login')
-      }
-    }
-    catch (error) {
-      console.log("there was an error: ", error)
-    }
+  //   try {
+  //     const result = await signUpNewUser(email, password)  
+  //     if (result.success) {
+  //       Alert.alert('Signed up successfully!');
+  //       router.push('/(forms)/Login')
+  //     }
+  //   }
+  //   catch (error) {
+  //     console.log("there was an error: ", error)
+  //   }
+  // }
+
+// const handleSignup = async () => {
+//   // Basic validation
+//   if (password !== confirmPassword) {
+//     Alert.alert('Passwords do not match!');
+//     return;
+//   }
+
+//   if (!name || !surname || !email || !password || !role) {
+//     Alert.alert('Please fill all required fields');
+//     return;
+//   }
+
+//   try {
+//     // Step 1: Sign up the user in Supabase Auth
+//     // const { data: signupData, error: signupError } = await supabase.auth.signUp({
+//     const { data: signupData, error: signupError } = await supabase.auth.signUp({
+//       email,
+//       password,
+//     });
+
+//     if (signupError) throw signupError;
+
+//     if (!signupData.user) {
+//       throw new Error('Signup failed. Please check your email for verification.');
+//     }
+
+//     // Step 2: Insert additional profile information
+//     const { error: profileError } = await supabase
+//       .from('attendees')
+//       .insert({
+//         id: signupData.user.id,  // use the auth ID
+//         full_name: name + ' ' + surname,
+//         email: email,
+//         age: age ? parseInt(age) : null,
+//         gender: gender || null,
+//         occupation: occupation,
+//         organization: organisation,
+//         role,
+//         city,
+//         country,
+//         interests,
+//       });
+
+//     if (profileError) throw profileError;
+
+//     Alert.alert('Signed up successfully!');
+//     router.push('/(forms)/Login');
+
+//   } catch (error) {
+//     console.error("Signup Error:", error);
+//     Alert.alert('Signup failed', error.message || 'An unexpected error occurred.');
+//   }
+// };
+
+const handleSignup = async () => {
+  // Validation
+  if (password !== confirmPassword) {
+    Alert.alert('Passwords do not match!');
+    return;
   }
+
+  if (!name || !surname || !email || !password) {
+    Alert.alert('Please fill all required fields');
+    return;
+  }
+
+  try {
+    // Step 1: Sign up user
+    const { data: signupData, error: signupError } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (signupError) throw signupError;
+    if (!signupData.user) throw new Error('Signup failed. Check your email for verification.');
+
+    // Step 2: Insert attendee profile
+    const fullName = `${name} ${surname}`;
+
+    const { error: profileError } = await supabase
+      .from('attendees')
+      .insert({
+        full_name: fullName,
+        email,
+        age: age ? parseInt(age) : null,
+        gender: gender || null,
+        occupation,
+        organization: organisation || null, // spelling changed to match table
+        country,
+        city,
+        interests: interests.length > 0 ? interests : null,
+      });
+
+    if (profileError) throw profileError;
+
+    Alert.alert('Signed up successfully!');
+    router.push('/(forms)/Login');
+
+  } catch (error) {
+    console.error("Signup Error:", error);
+    Alert.alert('Signup failed', error.message || 'An unexpected error occurred.');
+  }
+};
+
 
   const validateEmail = (text) => {
     setEmail(text);
@@ -99,12 +204,12 @@ export default function Signin() {
             <>
               <Text style={styles.Heading}>Sign Up</Text>
               <View style={styles.inputContainer}>
-                <TextInput style={styles.inputfield} placeholder="Name:" value={name} onChangeText={setName} />
-                <TextInput style={styles.inputfield} placeholder="Surname:" value={surname} onChangeText={setSurname} />
-                <TextInput style={styles.inputfield} placeholder="Occupation:" value={occupation} onChangeText={setOccupation} />
-                <TextInput style={styles.inputfield} placeholder="Organisation:" value={organisation} onChangeText={setOgarnisation} />
-                <TextInput style={styles.inputfield} keyboardType="numeric" placeholder="Age:" value={age} onChangeText={setAge} />
-                <TextInput style={styles.inputfield} value={gender} placeholder="Gender: *Optional" onChangeText={setGender} />
+                <TextInput style={styles.inputfield} placeholderTextColor="gray" placeholder="Name:" value={name} onChangeText={setName} />
+                <TextInput style={styles.inputfield} placeholderTextColor="gray" placeholder="Surname:" value={surname} onChangeText={setSurname} />
+                <TextInput style={styles.inputfield} placeholderTextColor="gray" placeholder="Occupation:" value={occupation} onChangeText={setOccupation} />
+                <TextInput style={styles.inputfield} placeholderTextColor="gray" placeholder="Organisation:" value={organisation} onChangeText={setOrganisation} />
+                <TextInput style={styles.inputfield} placeholderTextColor="gray" keyboardType="numeric" placeholder="Age:" value={age} onChangeText={setAge} />
+                <TextInput style={styles.inputfield} placeholderTextColor="gray" value={gender} placeholder="Gender: *Optional" onChangeText={setGender} />
                 <TouchableOpacity onPress={() => setShow(false)} style={{ backgroundColor: 'white', marginTop: '5%', borderRadius: 20, padding: 5, elevation: 2 }}>
                   <Ionicons name="chevron-forward-outline" size={30} color="black" />
                 </TouchableOpacity>
@@ -113,9 +218,9 @@ export default function Signin() {
           ) : (
             <>
               <View style={styles.inputContainer}>
-                <TextInput style={styles.inputfield} value={interests} placeholder="Interests:" onChangeText={setInterets} />
-                <Text style={{color:'red'}}>{emailError}</Text>
-                <TextInput 
+                {/* <TextInput style={styles.inputfield} value={interests} placeholder="Interests:" onChangeText={setInterets} /> */}
+                <Text style={{ color: 'red' }}>{emailError}</Text>
+                <TextInput
                   keyboardType="email-address"
                   autoCapitalize="none"
                   value={email}
@@ -126,7 +231,76 @@ export default function Signin() {
                     validateEmail(text)
                   }}
                 />
-                
+
+
+
+                <View style={{ zIndex: 2000, width: '90%' }}>
+                  <DropDownPicker
+                    open={openInterest}
+                    value={interests}
+                    items={interestsList}
+                    setOpen={setOpenInterest}
+                    // setValue={(callback) => setInterest(callback(interest))}
+                    setValue={setInterests}
+                    setItems={setInterestsList}
+                    multiple={true}
+                    placeholder="Select Interest"
+                    style={{
+                      borderWidth: 0,
+                      backgroundColor: 'white',
+                      elevation: 2,
+                      marginBottom: '5%',
+                    }}
+                    dropDownContainerStyle={{
+                      borderWidth: 0,
+                      backgroundColor: 'white',
+                      elevation: 2,
+                      marginBottom: '20%',
+                    }}
+                    selectedItemContainerStyle={{ backgroundColor: '#88A8D1' }}
+                    selectedItemLabelStyle={{
+                      color: 'black',
+                      fontWeight: 'bold',
+                    }}
+                    listItemLabelStyle={{
+                      color: 'black',
+                    }}
+                  />
+                </View>
+
+                <View style={{ zIndex: 1000, width: '90%' }}>
+                  <DropDownPicker
+                    open={open}
+                    value={role}
+                    items={roles}
+                    setOpen={setOpen}
+                    // setValue={(callback) => setRole(callback(role))}
+                    setValue={setRole}
+                    setItems={setRoles}
+                    placeholder="Select Role"
+                    style={{
+                      borderWidth: 0,
+                      backgroundColor: 'white',
+                      elevation: 2,
+                      marginBottom: '5%',
+                    }}
+                    dropDownContainerStyle={{
+                      borderWidth: 0,
+                      backgroundColor: 'white',
+                      elevation: 2,
+                      marginBottom: '20%',
+                    }}
+                    selectedItemContainerStyle={{ backgroundColor: '#88A8D1' }}
+                    selectedItemLabelStyle={{
+                      color: 'black',
+                      fontWeight: 'bold',
+                    }}
+                    listItemLabelStyle={{
+                      color: 'black',
+                    }}
+                  />
+                </View>
+
                 <View style={styles.passwordContainer}>
                   <TextInput
                     style={{ flex: 1 }}
@@ -161,67 +335,6 @@ export default function Signin() {
                       style={styles.eyeIcon}
                     />
                   </TouchableOpacity>
-                </View>
-
-                <View style={{ zIndex: 2000, width: '90%' }}>
-                  <DropDownPicker
-                    open={openInterest}
-                    value={interest}
-                    items={interestsList}
-                    setOpen={setOpenInterest}
-                    setValue={(callback) => setInterest(callback(interest))}
-                    setItems={setInterestsList}
-                    placeholder="Select Interest"
-                    style={{
-                      borderWidth: 0,
-                      backgroundColor: 'white',
-                      elevation: 2,
-                    }}
-                    dropDownContainerStyle={{
-                      borderWidth: 0,
-                      backgroundColor: 'white',
-                      elevation: 2,
-                      marginBottom: '20%', 
-                    }}
-                    selectedItemContainerStyle={{ backgroundColor: '#88A8D1' }}
-                    selectedItemLabelStyle={{
-                      color: 'black',
-                      fontWeight: 'bold',
-                    }}
-                    listItemLabelStyle={{
-                      color: 'black',
-                    }}
-                  />
-                </View>
-
-                <View style={{ zIndex: 1000, width: '90%' }}>
-                  <DropDownPicker
-                    open={open}
-                    value={role}
-                    items={roles}
-                    setOpen={setOpen}
-                    setValue={(callback) => setRole(callback(role))}
-                    setItems={setRoles}
-                    placeholder="Select Role"
-                    style={{
-                      borderWidth: 0,
-                      backgroundColor: 'white',
-                      elevation: 2,
-                    }}
-                    dropDownContainerStyle={{
-                      borderWidth: 0,
-                      backgroundColor: 'white',
-                      elevation: 2,
-                    }}
-                    selectedItemContainerStyle={{ backgroundColor: '#88A8D1' }}
-                    selectedItemLabelStyle={{
-                      color: 'black',
-                      fontWeight: 'bold',
-                    }}
-                    listItemLabelStyle={{
-                      color: 'black',
-                    }}
-                  />
                 </View>
 
                 <TouchableOpacity onPress={() => setShow(true)} style={{ backgroundColor: 'white', marginTop: '5%', borderRadius: 20, padding: 5, elevation: 2 }}>

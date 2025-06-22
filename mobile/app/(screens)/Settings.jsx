@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useState, useContext } from 'react';
 import {
   View,
@@ -14,17 +15,23 @@ import {
   Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { UserAuth } from '@/hooks/AuthContext';
 
 import { Colors } from '@/constants/Colors';
 import { ThemeContext } from '@/hooks/ThemeContext';
+import { router } from 'expo-router';
 
 
 import * as ImagePicker from 'expo-image-picker'; // optional but recommended for image picking
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function Settings() {
   const [username, setUsername] = useState("");
   const [socialLink, setSocialLink] = useState('');
   const [socialLinks, setSocialLinks] = useState([]);
+  const {signOut} = UserAuth();
+
+  
 
   const [profileImage, setProfileImage] = useState(
         "https://readdy.ai/api/search-image?query=professional%20portrait%20photo%20of%20a%20young%20woman%20with%20shoulder%20length%20brown%20hair%2C%20friendly%20smile%2C%20business%20casual%20attire%2C%20high%20quality%2C%20studio%20lighting%2C%20clean%20background%2C%20professional%20headshot&width=100&height=100&seq=1&orientation=squarish",
@@ -74,17 +81,29 @@ export default function Settings() {
     }
   };
 
-  const handleLogout = () => {
-    Alert.alert('Logging out...');
-  };
+  const handleLogout = async () => {
+  try {
+    await signOut(); // call context sign out
+
+    // Clear local storage
+    await AsyncStorage.removeItem('session');
+    await AsyncStorage.removeItem('userProfile');
+
+    Alert.alert('Logged out');
+    console.log(``)
+    router.replace('/(forms)/Login'); // redirect to login screen
+  } catch (error) {
+    console.log("Logout error:", error);
+    // Alert.alert('Logout failed', 'Please try again.');
+  }
+};
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
       {/* Navigation Bar */}
-      <View style={[styles.navBar, { backgroundColor: isDarkMode ? '#2D3748' : '#FFFFFF' }]}>
+      <View style={[styles.navBar, { backgroundColor: currentColors.navBackground }]}>
         <TouchableOpacity style={styles.navButton}>
-          {/* Use any back icon here */}
-          <Text style={{ color: currentColors.textPrimary, fontSize: 18 }}>←</Text>
+          <MaterialCommunityIcons name="chevron-left" size={24} color={currentColors.textPrimary} onPress={() => router.back()} />
         </TouchableOpacity>
         <Text style={[styles.navTitle, { color: currentColors.textPrimary }]}>Settings</Text>
         <View style={{ width: 40 }} />
@@ -108,7 +127,7 @@ export default function Settings() {
             </TouchableOpacity>
             <TouchableOpacity
               onPress={pickImage}
-              style={[styles.changePhotoButton, { backgroundColor: currentColors.buttonBackground }]}
+              style={[styles.changePhotoButton, { backgroundColor: currentColors.primaryButton }]}
               activeOpacity={0.7}
             >
               <Text style={{ color: currentColors.buttonText }}>Change Photo</Text>
@@ -124,18 +143,18 @@ export default function Settings() {
               <TextInput
                 style={[
                   styles.input,
-                  { backgroundColor: isDarkMode ? '#4A5568' : '#EDF2F7', color: currentColors.textPrimary },
+                  { backgroundColor: currentColors.background, color: currentColors.textPrimary },
                   { borderTopRightRadius: 0, borderBottomRightRadius: 0 },
                 ]}
                 placeholder="Add your social media link"
-                placeholderTextColor={isDarkMode ? '#A0AEC0' : '#718096'}
+                placeholderTextColor={currentColors.textSecondary}
                 value={socialLink}
                 onChangeText={setSocialLink}
                 autoCapitalize="none"
                 keyboardType="url"
               />
               <TouchableOpacity
-                style={[styles.addButton]}
+                style={[styles.addButton, { backgroundColor: currentColors.primaryButton }]}
                 onPress={handleAddSocialLink}
                 activeOpacity={0.7}
               >
@@ -185,11 +204,11 @@ export default function Settings() {
               </View>
 
               <Switch
-                trackColor={{ false: "#81b0ff", true: "#81b0ff" }}
+                trackColor={currentColors.secondaryButton}
                 thumbColor={
                   isDarkMode
-                    ? currentColors.buttonBackground
-                    : currentColors.buttonBackground
+                    ? currentColors.primaryButton
+                    : currentColors.primaryButton
                 }
                 onValueChange={toggleTheme}
                 value={isDarkMode}
@@ -201,7 +220,7 @@ export default function Settings() {
           <View style={[styles.card, { backgroundColor: currentColors.cardBackground,  }]}>
             <TouchableOpacity
               onPress={handleLogout}
-              style={[styles.logoutButton]}
+              style={[styles.logoutButton, { backgroundColor: currentColors.logoutButtonBackground}]}
               activeOpacity={0.7}
             >
               <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Log Out</Text>
@@ -209,8 +228,6 @@ export default function Settings() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-
-
     </SafeAreaView>
   );
 };

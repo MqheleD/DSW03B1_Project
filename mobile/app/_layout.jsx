@@ -1,15 +1,13 @@
 import { Stack } from "expo-router";
-import { useEffect, useState } from "react";
 import { StatusBar } from "react-native";
-import SplashScreen from "./SplashScreen";
-import { ThemeProvider } from "@/hooks/ThemeContext";
-import { AuthContext, AuthContextProvider }  from "../hooks/AuthContext"
-
+import { useState, useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { ThemeProvider } from "@/hooks/ThemeContext";
+import { AuthContextProvider } from "../hooks/AuthContext";
+import SplashScreen from "./SplashScreen";
 
 export default function RootLayout() {
   const [showSplash, setShowSplash] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false); //Once authentication has been done
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -21,22 +19,13 @@ export default function RootLayout() {
   if (showSplash) return <SplashScreen />;
 
   return (
-    <>
-      <StatusBar style="auto" />
-      <AuthContextProvider>
-        <ThemeProvider>
-          {/* The ThemeProvider will provide the theme context to all components */}
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <Stack screenOptions={{ headerShown: false }}>
-              {!isAuthenticated ? (
-                <Stack.Screen name="(forms)/Login" />
-              ) : (
-                <Stack.Screen name="(tabs)/home" />
-              )}
-            </Stack>
-          </GestureHandlerRootView>
-        </ThemeProvider>
-      </AuthContextProvider>
-    </>
+    <AuthContextProvider>
+      <ThemeProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <StatusBar style="auto" />
+          <Stack screenOptions={{ headerShown: false }} />
+        </GestureHandlerRootView>
+      </ThemeProvider>
+    </AuthContextProvider>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+
+import {ThemeContext} from "../../hooks/ThemeContext"; 
+import {Colors} from "../../constants/Colors"; 
 
 import { router } from 'expo-router';
 
@@ -65,6 +68,8 @@ export default function App() {
   const [selectedTab, setSelectedTab] = useState("Today");
   const [currentTime, setCurrentTime] = useState(new Date());
 
+  const {currentColors, isDarkMode} = useContext(ThemeContext);
+
   useEffect(() => {
     // Optional: Update current time every minute
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -78,14 +83,14 @@ export default function App() {
   });
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark" />
+    <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
+      <StatusBar style={isDarkMode ? "light" : "dark"} />
       {/* Nav Bar */}
-      <View style={styles.navBar}>
-        <Text style={styles.navTitle}>Home</Text>
+      <View style={[styles.navBar, { backgroundColor: currentColors.navBarBackground }]}>
+        <Text style={[styles.navTitle, {color: currentColors.textPrimary}]}>Home</Text>
         <View style={styles.navIcons}>
-          <TouchableOpacity style={styles.iconButton} onPress={() => router.push("/(screens)/Scanner")}>
-            <MaterialCommunityIcons name="line-scan" size={16} color="#4B5563" />
+          <TouchableOpacity style={[styles.iconButton, {backgroundColor: currentColors.cardBackground}]} onPress={() => router.push("/(screens)/Scanner")}>
+            <MaterialCommunityIcons name="line-scan" size={16} color={currentColors.textPrimary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -103,7 +108,7 @@ export default function App() {
             <View style={styles.onlineIndicator} />
           </View>
           <View style={{ marginLeft: 12 }}>
-            <Text style={styles.profileName}>Hello, Emma!</Text>
+            <Text style={[styles.profileName, {color: currentColors.textPrimary}]}>Hello, Emma!</Text>
             <Text style={styles.profileDate}>{formattedDate}</Text>
           </View>
         </View>
@@ -111,29 +116,30 @@ export default function App() {
         {/* Quick Actions */}
         <View style={styles.quickActions}>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: "#fff" }]}
+            style={[styles.actionButton, { backgroundColor: currentColors.cardBackground }]}
           >
             <View
               style={[styles.actionIconCircle, { backgroundColor: "#dbeafe" }]}
             >
               <FontAwesome5 name="qrcode" size={20} color="#2563eb" />
             </View>
-            <Text style={styles.actionText}>Scan QR Code</Text>
+            <Text style={[styles.actionText, {color: currentColors.textSecondary}]}>Scan QR Code</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: "#fff" }]}
+              style={[styles.actionButton, { backgroundColor: currentColors.cardBackground }]}
+
           >
             <View
               style={[styles.actionIconCircle, { backgroundColor: "#ede9fe" }]}
             >
               <FontAwesome5 name="share-alt" size={20} color="#7c3aed" />
             </View>
-            <Text style={styles.actionText}>Share Details</Text>
+            <Text style={[styles.actionText, {color: currentColors.textSecondary}]}>Share Details</Text>
           </TouchableOpacity>
         </View>
 
         {/* Upcoming Event Banner */}
-        <View style={styles.upcomingEvent}>
+        <View style={[styles.upcomingEvent, { backgroundColor: currentColors.primaryButton }]}>
           <View style={styles.upcomingEventTop}>
             <View>
               <Text style={styles.nextEventLabel}>NEXT EVENT</Text>
@@ -159,34 +165,31 @@ export default function App() {
                 <Text style={styles.upcomingEventText}>Conference Room A</Text>
               </View>
             </View>
-            {/* <View style={styles.videoIconWrapper}>
-              <FontAwesome5 name="video" size={24} color="white" />
-            </View> */}
           </View>
-          <TouchableOpacity style={styles.joinButton}>
-            <Text style={styles.joinButtonText}>Join Now</Text>
+          <TouchableOpacity style={[styles.joinButton, {backgroundColor: currentColors.secondaryButton}]} onPress={() => router.push('/(screens)/Scanner')}>
+            <Text style={styles.joinButtonText}>Check In</Text>
           </TouchableOpacity>
         </View>
 
         {/* My Events Section */}
         <View style={{ marginTop: 24 }}>
-          <Text style={styles.sectionTitle}>My Events</Text>
+          <Text style={[styles.sectionTitle, {color: currentColors.textPrimary}]}>My Events</Text>
 
           {/* Tab Switcher */}
-          <View style={styles.tabSwitcher}>
+          <View style={[styles.tabSwitcher, { backgroundColor: currentColors.secondaryButton }]}>
             {["Today", "Tomorrow"].map((tab) => (
               <TouchableOpacity
                 key={tab}
                 onPress={() => setSelectedTab(tab)}
                 style={[
-                  styles.tabButton,
-                  selectedTab === tab && styles.tabButtonActive,
+                  [styles.tabButton, ],
+                  selectedTab === tab && {backgroundColor: currentColors.primaryButton},
                 ]}
               >
                 <Text
                   style={[
-                    styles.tabButtonText,
-                    selectedTab === tab && styles.tabButtonTextActive,
+                    {color: currentColors.textSecondary, fontWeight: "500"},
+                    selectedTab === tab && { color: "white" },
                   ]}
                 >
                   {tab}
@@ -198,7 +201,7 @@ export default function App() {
           {/* Events List */}
           <View style={{ marginTop: 16 }}>
             {eventsData[selectedTab].map((event) => (
-              <View key={event.id} style={styles.eventCard}>
+              <View key={event.id} style={[styles.eventCard, { backgroundColor: currentColors.cardBackground }]}>
                 <View style={styles.eventCardHeader}>
                   <View style={{ flexDirection: "row", alignItems: "center" }}>
                     <View
@@ -213,10 +216,10 @@ export default function App() {
                         <FontAwesome5
                           name="clock"
                           size={12}
-                          color="#6b7280"
+                          color={{color: currentColors.textSecondary}}
                           style={{ marginRight: 4 }}
                         />
-                        <Text style={styles.eventTimeText}>{event.time}</Text>
+                        <Text style={[styles.eventTimeText, {color: currentColors.textSecondary}]}>{event.time}</Text>
                       </View>
                     </View>
                   </View>
@@ -263,7 +266,7 @@ export default function App() {
                     color="#6b7280"
                     style={{ marginRight: 4 }}
                   />
-                  <Text style={styles.eventLocationText}>{event.location}</Text>
+                  <Text style={[styles.eventLocationText, {color: currentColors.textSecondary}]}>{event.location}</Text>
                 </View>
               </View>
             ))}
@@ -286,7 +289,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 56,
-    backgroundColor: "#fff",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -378,7 +380,7 @@ const styles = StyleSheet.create({
   actionIconCircle: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 999999,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
@@ -436,7 +438,7 @@ const styles = StyleSheet.create({
   joinButtonText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#3b82f6",
+    color: "#fff",
   },
   sectionTitle: {
     fontSize: 22,
@@ -445,7 +447,6 @@ const styles = StyleSheet.create({
   tabSwitcher: {
     marginTop: 16,
     flexDirection: "row",
-    backgroundColor: "#f3f4f6", // gray-100
     borderRadius: 12,
     padding: 4,
   },
@@ -472,7 +473,6 @@ const styles = StyleSheet.create({
     color: "#000",
   },
   eventCard: {
-    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
