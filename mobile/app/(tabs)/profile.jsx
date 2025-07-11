@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import {
     View,
     Text,
@@ -8,12 +8,13 @@ import {
     TouchableOpacity,
     StatusBar,
     Dimensions,
+    ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import {ThemeContext} from "../../hooks/ThemeContext"; 
-
+import { ThemeContext } from "../../hooks/ThemeContext";
+import { UserAuth } from "../../hooks/AuthContext";
 import { router } from 'expo-router';
 
 const { width } = Dimensions.get('window');
@@ -21,20 +22,36 @@ const { width } = Dimensions.get('window');
 export default function ProfileScreen() {
     const [expandedInterests, setExpandedInterests] = useState(true);
     const [expandedContact, setExpandedContact] = useState(true);
+    const { currentColors, isDarkMode } = useContext(ThemeContext);
+    const { profile, loading, signOut } = UserAuth();
+    const [interests, setInterests] = useState([]);
 
-    const {currentColors, isDarkMode} = useContext(ThemeContext);
+    // Handle logout
+    const handleLogout = async () => {
+        try {
+            await signOut();
+            router.replace('/(forms)/Login');
+        } catch (error) {
+            console.log("Logout error:", error);
+        }
+    };
 
-    const interests = [
-        { id: 1, name: '2D Animation', active: false },
-        { id: 3, name: 'AI Integration', active: true },
-        { id: 4, name: 'VFX', active: true },
-        { id: 5, name: 'Character Design', active: true },
-        { id: 6, name: 'NFT Art', active: true },
-        { id: 7, name: '3D Animation', active: true },
-        { id: 8, name: 'Game Development', active: true },
-    ];
+    // Load interests from profile
+    useEffect(() => {
+        if (profile?.interests) {
+            setInterests(profile.interests);
+        }
+    }, [profile]);
 
-    const bannerColor = currentColors.secondaryButton.replace("#",""); // Use primary button color for banner
+    const bannerColor = currentColors.secondaryButton.replace("#", "");
+
+    if (loading) {
+        return (
+            <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
+                <ActivityIndicator size="large" color={currentColors.primaryButton} />
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
@@ -42,9 +59,7 @@ export default function ProfileScreen() {
 
             {/* Banner Image */}
             <Image
-            // The banner image will change based on the event
                 source={{ uri: `https://placehold.co/600x200/${bannerColor}/ffffff/png?text=AVIJOZI25` }}
-
                 style={styles.bannerImage}
                 resizeMode="cover"
             />
@@ -53,16 +68,18 @@ export default function ProfileScreen() {
             <View style={styles.profileImageContainer}>
                 <Image
                     source={{
-                        uri: "https://readdy.ai/api/search-image?query=professional%20portrait%20photo%20of%20a%20young%20woman%20with%20shoulder%20length%20brown%20hair%2C%20friendly%20smile%2C%20business%20casual%20attire%2C%20high%20quality%2C%20studio%20lighting%2C%20clean%20background%2C%20professional%20headshot&width=100&height=100&seq=1&orientation=squarish",
+                        uri: profile?.avatar_url  || "https://readdy.ai/api/search-image?query=professional%20portrait%20photo%20of%20a%20young%20woman%20with%20shoulder%20length%20brown%20hair%2C%20friendly%20smile%2C%20business%20casual%20attire%2C%20high%20quality%2C%20studio%20lighting%2C%20clean%20background%2C%20professional%20headshot&width=100&height=100&seq=1&orientation=squarish",
                     }}
                     style={styles.profileImage}
                 />
                 <View style={styles.buttonContainer}>
-
                     <TouchableOpacity style={[styles.editProfileButton, { backgroundColor: currentColors.primaryButton }]} >
                         <Text style={styles.editProfileButtonText}>Share profile</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.editProfileButton, {backgroundColor: currentColors.secondaryButton}]} onPress={() => router.push('/(screens)/Settings')}>
+                    <TouchableOpacity 
+                        style={[styles.editProfileButton, {backgroundColor: currentColors.secondaryButton}]} 
+                        onPress={() => router.push('/(screens)/Settings')}
+                    >
                         <Text style={[styles.editProfileButtonText, {color: currentColors.textPrimary}]}>Edit profile</Text>
                     </TouchableOpacity>
                 </View>
@@ -71,7 +88,7 @@ export default function ProfileScreen() {
             <ScrollView style={styles.contentContainer} contentContainerStyle={{ paddingBottom: 60 }}>
                 {/* User Info Section */}
                 <View style={[styles.userInfoContainer, { backgroundColor: currentColors.cardBackground, borderColor: currentColors.secondaryButton }]}>
-                    <Text style={[styles.userName, {color: currentColors.textPrimary}]}>Thabo Mbeki</Text>
+                    <Text style={[styles.userName, {color: currentColors.textPrimary}]}>{profile?.full_name || "Unnamed"}</Text>
                     <Text style={[styles.userHandle, {color: currentColors.textSecondary}]}>@thabo_animator</Text>
                     <Text style={[styles.userBio, {color: currentColors.textPrimary}]}>
                         I don't know if this section is necessary
@@ -93,27 +110,18 @@ export default function ProfileScreen() {
                 {/* Interests Section */}
                 <View style={[styles.section, { backgroundColor: currentColors.cardBackground, borderColor: currentColors.secondaryButton }]}>
                     <Text style={[styles.sectionTitle, {color: currentColors.textPrimary}]}>Professional Interests</Text>
-
                     <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={styles.chipScroll}
                     >
-                        {interests.map((interest) => (
+                        {interests.map((interest, index) => (
                             <View
-                                key={interest.id}
-                                style={[
-                                    styles.chip,
-                                    interest.active ? styles.chipActive : styles.chipInactive,
-                                ]}
+                                key={index}
+                                style={[styles.chip, styles.chipActive]}
                             >
-                                <Text
-                                    style={[
-                                        styles.chipText,
-                                        interest.active ? styles.textActive : styles.textInactive,
-                                    ]}
-                                >
-                                    {interest.name}
+                                <Text style={[styles.chipText, styles.textActive]}>
+                                    {interest}
                                 </Text>
                             </View>
                         ))}
@@ -121,8 +129,7 @@ export default function ProfileScreen() {
                 </View>
 
                 {/* Festival Schedule */}
-                                <View style={[styles.section, { backgroundColor: currentColors.cardBackground, borderColor: currentColors.secondaryButton }]}>
-
+                <View style={[styles.section, { backgroundColor: currentColors.cardBackground, borderColor: currentColors.secondaryButton }]}>
                     <Text style={[styles.sectionTitle, {color: currentColors.textPrimary}]}>My Festival Schedule</Text>
                     <View style={styles.scheduleItem}>
                         <FontAwesome5 name="calendar-day" size={16} color="#3b82f6" />
@@ -135,8 +142,7 @@ export default function ProfileScreen() {
                 </View>
 
                 {/* Recent Activity */}
-                                <View style={[styles.section, { backgroundColor: currentColors.cardBackground, borderColor: currentColors.secondaryButton }]}>
-
+                <View style={[styles.section, { backgroundColor: currentColors.cardBackground, borderColor: currentColors.secondaryButton }]}>
                     <Text style={[styles.sectionTitle, {color: currentColors.textPrimary}]}>Recent Activity</Text>
                     <View style={styles.activityItem}>
                         <FontAwesome5 name="heart" size={16} color="#ef4444" />
@@ -153,6 +159,14 @@ export default function ProfileScreen() {
                         </View>
                     </View>
                 </View>
+
+                {/* Logout Button */}
+                <TouchableOpacity 
+                    style={[styles.logoutButton, { backgroundColor: currentColors.secondaryButton }]}
+                    onPress={handleLogout}
+                >
+                    <Text style={[styles.logoutButtonText, { color: currentColors.textPrimary }]}>Log Out</Text>
+                </TouchableOpacity>
             </ScrollView>
         </SafeAreaView>
     );

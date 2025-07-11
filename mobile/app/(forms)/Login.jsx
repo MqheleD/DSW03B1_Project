@@ -20,6 +20,7 @@ export default function Login() {
   const [emailError, setEmailError] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
+  
 
   const { session, signInUser } = UserAuth();
 
@@ -48,8 +49,11 @@ const handleLogin = async () => {
   try {
     const result = await signInUser(email, password);
     if (result.success) {
-      const fullName = result.profile.full_name || result.profile.name || 'User';
+      // const fullName = result.profile.full_name || result.profile.name || 'User';
       // Alert.alert(`Welcome back, ${fullName}!`);
+      
+      
+      // Alert.prompt(user)
       router.replace('/(tabs)/home');
     } else {
       Alert.alert('Login failed', result.message || 'Invalid credentials.');

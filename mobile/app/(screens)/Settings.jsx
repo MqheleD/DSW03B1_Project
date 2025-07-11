@@ -1,5 +1,5 @@
+import { useState, useContext } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -13,31 +13,29 @@ import {
   Platform,
   KeyboardAvoidingView,
   Switch,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { UserAuth } from '@/hooks/AuthContext';
-
 import { Colors } from '@/constants/Colors';
 import { ThemeContext } from '@/hooks/ThemeContext';
 import { router } from 'expo-router';
-
-
-import * as ImagePicker from 'expo-image-picker'; // optional but recommended for image picking
+import * as ImagePicker from 'expo-image-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import 'react-native-url-polyfill/auto';
+import { decode } from 'base64-arraybuffer';
+import supabase from '@/app/supabaseClient';
 
 export default function Settings() {
   const [username, setUsername] = useState("");
   const [socialLink, setSocialLink] = useState('');
   const [socialLinks, setSocialLinks] = useState([]);
-  const {signOut} = UserAuth();
-
-  
+  const { signOut, profile, updateProfile } = UserAuth();
+  const [uploading, setUploading] = useState(false);
 
   const [profileImage, setProfileImage] = useState(
-        "https://readdy.ai/api/search-image?query=professional%20portrait%20photo%20of%20a%20young%20woman%20with%20shoulder%20length%20brown%20hair%2C%20friendly%20smile%2C%20business%20casual%20attire%2C%20high%20quality%2C%20studio%20lighting%2C%20clean%20background%2C%20professional%20headshot&width=100&height=100&seq=1&orientation=squarish",
+    profile?.avatar_url || "https://readdy.ai/api/search-image?query=professional%20portrait%20photo%20of%20a%20young%20woman%20with%20shoulder%20length%20brown%20hair%2C%20friendly%20smile%2C%20business%20casual%20attire%2C%20high%20quality%2C%20studio%20lighting%2C%20clean%20background%2C%20professional%20headshot&width=100&height=100&seq=1&orientation=squarish",
   );
-
-  // Toggle theme mode
 
   const { isDarkMode, toggleTheme, currentColors, setIsDarkMode } =
     useContext(ThemeContext);
@@ -46,7 +44,6 @@ export default function Settings() {
     setIsDarkMode(!isDarkMode);
   };
 
-  // Add social link if not empty
   const handleAddSocialLink = () => {
     if (socialLink.trim()) {
       setSocialLinks([...socialLinks, socialLink.trim()]);
@@ -54,14 +51,12 @@ export default function Settings() {
     }
   };
 
-  // Remove social link by index
   const handleRemoveSocialLink = (index) => {
     const updatedLinks = [...socialLinks];
     updatedLinks.splice(index, 1);
     setSocialLinks(updatedLinks);
   };
 
-  // Pick image from library
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permissionResult.granted === false) {
@@ -71,43 +66,152 @@ export default function Settings() {
 
     const pickerResult = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1,
+      quality: 0.8,
       allowsEditing: true,
-      aspect: [1, 1], // square crop
+      aspect: [1, 1],
+      base64: true,
     });
 
-    if (!pickerResult.canceled) {
-      setProfileImage(pickerResult.assets[0].uri);
+    if (!pickerResult.canceled && pickerResult.assets[0].base64) {
+      await uploadImage(pickerResult.assets[0].base64);
     }
   };
 
-  const handleLogout = async () => {
+  // const uploadImage = async (base64Data) => {
+  //   if (!profile?.id) {
+  //     Alert.alert('Error', 'User not authenticated');
+  //     return;
+  //   }
+
+  //   try {
+  //     setUploading(true);
+      
+  //     const fileName = `avatar_${profile.id}_${Date.now()}.jpg`;
+  //     const filePath = `${fileName}`;
+      
+  //     const { error } = await supabase.storage
+  //       .from('avatars')
+  //       .upload(filePath, decode(base64Data), {
+  //         contentType: 'image/jpeg',
+  //         upsert: true,
+  //       });
+
+  //     if (error) {
+  //       throw error;
+  //     }
+
+  //     const { data: { publicUrl } } = supabase
+  //       .storage
+  //       .from('avatars')
+  //       .getPublicUrl(filePath);
+
+  //     // Update user profile in database
+  //     const { data, error: updateError } = await supabase
+  //       .from('attendees')
+  //       .update({
+  //         avatar_url: publicUrl,
+  //         updated_at: new Date().toISOString(),
+  //       })
+  //       .eq('id', profile.id)
+  //       .select();
+
+  //     if (updateError) {
+  //       throw updateError;
+  //     }
+
+  //     // Update local state and storage
+  //     setProfileImage(publicUrl);
+  //     updateProfile({ ...profile, avatar_url: publicUrl });
+      
+  //     Alert.alert('Success', 'Profile image updated!');
+      
+  //   } catch (error) {
+  //     console.error('Upload error:', error);
+  //     Alert.alert('Upload failed', error.message || 'Could not upload image');
+  //   } finally {
+  //     setUploading(false);
+  //   }
+  // };
+
+const uploadImage = async (base64Data) => {
   try {
-    await signOut(); // call context sign out
+    setUploading(true);
 
-    // Clear local storage
-    await AsyncStorage.removeItem('session');
-    await AsyncStorage.removeItem('userProfile');
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-    Alert.alert('Logged out');
-    console.log(``)
-    router.replace('/(forms)/Login'); // redirect to login screen
+    if (userError || !user) {
+      Alert.alert('Error', 'User not authenticated');
+      return;
+    }
+
+    const fileName = `avatar_${user.id}_${Date.now()}.jpg`;
+    const filePath = `${fileName}`;
+
+    // Upload to Supabase Storage
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, decode(base64Data), {
+        contentType: 'image/jpeg',
+        upsert: true,
+      });
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    // Get public URL
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from('avatars').getPublicUrl(filePath);
+
+    // Update image_url for the authenticated user
+    const { error: updateError } = await supabase
+      .from('attendees')
+      .update({
+        avatar_url: publicUrl,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', user.id); // ✅ id = auth.uid()
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    setProfileImage(publicUrl);
+    updateProfile({ ...profile, image_url: publicUrl });
+
+    Alert.alert('Success', 'Profile image updated!');
   } catch (error) {
-    console.log("Logout error:", error);
-    // Alert.alert('Logout failed', 'Please try again.');
+    console.error('Upload error:', error);
+    Alert.alert('Upload failed', error.message || 'Could not upload image');
+  } finally {
+    setUploading(false);
   }
 };
 
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      await AsyncStorage.removeItem('session');
+      await AsyncStorage.removeItem('profile');
+      router.replace('/(forms)/Login');
+    } catch (error) {
+      console.log("Logout error:", error);
+    }
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
-      {/* Navigation Bar */}
       <View style={[styles.navBar, { backgroundColor: currentColors.navBackground }]}>
         <TouchableOpacity style={styles.navButton}>
           <MaterialCommunityIcons name="chevron-left" size={24} color={currentColors.textPrimary} onPress={() => router.back()} />
         </TouchableOpacity>
         <Text style={[styles.navTitle, { color: currentColors.textPrimary }]}>Settings</Text>
         <View style={{ width: 40 }} />
-        {/* Spacer for right side so title centers */}
       </View>
 
       <KeyboardAvoidingView
@@ -119,22 +223,30 @@ export default function Settings() {
           {/* Profile Image Section */}
           <View style={[styles.card, { backgroundColor: currentColors.cardBackground, alignItems: 'center' }]}>
             <Text style={[styles.sectionTitle, { color: currentColors.textPrimary, marginBottom: 12 }]}>Profile Picture</Text>
-            <TouchableOpacity onPress={pickImage} activeOpacity={0.7}>
-              <Image
-                source={{ uri: profileImage }}
-                style={styles.profileImage}
-              />
-            </TouchableOpacity>
+            <View style={styles.imageContainer}>
+              <TouchableOpacity onPress={pickImage} activeOpacity={0.7}>
+                <Image
+                  source={{ uri: profileImage }}
+                  style={styles.profileImage}
+                />
+                {uploading && (
+                  <View style={styles.uploadingOverlay}>
+                    <ActivityIndicator size="small" color="#fff" />
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
             <TouchableOpacity
               onPress={pickImage}
               style={[styles.changePhotoButton, { backgroundColor: currentColors.primaryButton }]}
               activeOpacity={0.7}
+              disabled={uploading}
             >
-              <Text style={{ color: currentColors.buttonText }}>Change Photo</Text>
+              <Text style={{ color: currentColors.buttonText }}>
+                {uploading ? 'Uploading...' : 'Change Photo'}
+              </Text>
             </TouchableOpacity>
           </View>
-
-
 
           {/* Social Links Section */}
           <View style={[styles.card, { backgroundColor: currentColors.cardBackground }]}>
@@ -202,14 +314,9 @@ export default function Settings() {
                   {isDarkMode ? 'Dark Mode' : 'Light Mode'}
                 </Text>
               </View>
-
               <Switch
                 trackColor={currentColors.secondaryButton}
-                thumbColor={
-                  isDarkMode
-                    ? currentColors.primaryButton
-                    : currentColors.primaryButton
-                }
+                thumbColor={currentColors.primaryButton}
                 onValueChange={toggleTheme}
                 value={isDarkMode}
               />
@@ -217,10 +324,10 @@ export default function Settings() {
           </View>
 
           {/* Logout Button */}
-          <View style={[styles.card, { backgroundColor: currentColors.cardBackground,  }]}>
+          <View style={[styles.card, { backgroundColor: currentColors.cardBackground }]}>
             <TouchableOpacity
               onPress={handleLogout}
-              style={[styles.logoutButton, { backgroundColor: currentColors.logoutButtonBackground}]}
+              style={[styles.logoutButton, { backgroundColor: currentColors.logoutButtonBackground }]}
               activeOpacity={0.7}
             >
               <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Log Out</Text>
@@ -230,7 +337,7 @@ export default function Settings() {
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -254,63 +361,37 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
-
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 80, // leave room for tab bar
+    paddingBottom: 80,
   },
-
   card: {
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#red',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-
   row: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-
   rowSpaceBetween: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
   },
-
   sectionSubtitle: {
     fontSize: 12,
     marginTop: 2,
   },
-
-  toggleSwitch: {
-    width: 44,
-    height: 24,
-    borderRadius: 12,
-    padding: 2,
-    justifyContent: 'center',
-  },
-
-  toggleThumb: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#FFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 2,
-  },
-
   input: {
     flex: 1,
     height: 40,
@@ -318,7 +399,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     fontSize: 14,
   },
-
   addButton: {
     width: 40,
     height: 40,
@@ -328,7 +408,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   socialLinkItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -337,30 +416,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 8,
   },
-
   socialLinkText: {
     flex: 1,
     fontSize: 14,
   },
-
+  imageContainer: {
+    position: 'relative',
+  },
   profileImage: {
     width: 96,
     height: 96,
     borderRadius: 48,
     marginBottom: 12,
   },
-
+  uploadingOverlay: {
+    position: 'absolute',
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   changePhotoButton: {
     paddingVertical: 8,
     paddingHorizontal: 24,
     borderRadius: 12,
   },
-
   logoutButton: {
-    backgroundColor: '#E53E3E',
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
   },
 });
-

@@ -13,7 +13,7 @@ import {
 import DropDownPicker from 'react-native-dropdown-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { supabase } from '../supabaseClient';
+import supabase from '../supabaseClient';
 import { UserAuth } from '@/hooks/AuthContext';
 
 export default function Signin() {
@@ -51,7 +51,7 @@ export default function Signin() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
 
-  const { session, signUpNewUser } = UserAuth();
+const { session, signUpNewUser, updateProfile } = UserAuth();
   // console.log(session);
 
   // sign up logic
@@ -129,55 +129,116 @@ export default function Signin() {
 //   }
 // };
 
+// const handleSignup = async () => {
+//   if (password !== confirmPassword) {
+//     Alert.alert('Passwords do not match!');
+//     return;
+//   }
+
+//   if (!name || !surname || !email || !password || !role) {
+//     Alert.alert('Please fill all required fields');
+//     return;
+//   }
+
+//   try {
+//     const result = await signUpNewUser(email, password);
+
+//     if (!result.success) {
+//       Alert.alert('Signup failed', result.message || 'An unexpected error occurred.');
+//       return;
+//     }
+
+//     const user = result.data?.user;
+//     if (!user) {
+//       Alert.alert('Signup failed', 'User object not returned.');
+//       return;
+//     }
+
+//     const fullName = `${name} ${surname}`;
+
+//     const { error: profileError } = await supabase
+//       .from('attendees')
+//       .insert({
+//         id: user.id,
+//         full_name: fullName,
+//         email,
+//         age: age ? parseInt(age) : null,
+//         gender: gender || null,
+//         occupation,
+//         organization: organisation || null,
+//         country,
+//         city,
+//         interests: interests.length > 0 ? interests : null,
+//         role,
+//       });
+
+//     if (profileError) throw profileError;
+
+//     Alert.alert('Signed up successfully!');
+//     router.push('/(forms)/Login');
+//   } catch (error) {
+//     console.error('[Signup Error]', error);
+//     Alert.alert('Signup failed', error.message || 'An unexpected error occurred.');
+//   }
+// };
+
 const handleSignup = async () => {
-  // Validation
   if (password !== confirmPassword) {
     Alert.alert('Passwords do not match!');
     return;
   }
 
-  if (!name || !surname || !email || !password) {
+  if (!name || !surname || !email || !password || !role) {
     Alert.alert('Please fill all required fields');
     return;
   }
 
   try {
-    // Step 1: Sign up user
-    const { data: signupData, error: signupError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    const result = await signUpNewUser(email, password);
 
-    if (signupError) throw signupError;
-    if (!signupData.user) throw new Error('Signup failed. Check your email for verification.');
+    if (!result.success) {
+      Alert.alert('Signup failed', result.message || 'An unexpected error occurred.');
+      return;
+    }
 
-    // Step 2: Insert attendee profile
+    const user = result.data?.user;
+    if (!user) {
+      Alert.alert('Signup failed', 'User object not returned.');
+      return;
+    }
+
     const fullName = `${name} ${surname}`;
+    const profileData = {
+      id: user.id,
+      full_name: fullName,
+      email,
+      age: age ? parseInt(age) : null,
+      gender: gender || null,
+      occupation,
+      organization: organisation || null,
+      country,
+      city,
+      interests: interests.length > 0 ? interests : null,
+      // role,
+    };
 
     const { error: profileError } = await supabase
       .from('attendees')
-      .insert({
-        full_name: fullName,
-        email,
-        age: age ? parseInt(age) : null,
-        gender: gender || null,
-        occupation,
-        organization: organisation || null, // spelling changed to match table
-        country,
-        city,
-        interests: interests.length > 0 ? interests : null,
-      });
+      .insert(profileData);
 
     if (profileError) throw profileError;
 
+    // ✅ Sync profile with context and AsyncStorage
+    await updateProfile(profileData);
+
     Alert.alert('Signed up successfully!');
     router.push('/(forms)/Login');
-
   } catch (error) {
-    console.error("Signup Error:", error);
+    console.error('[Signup Error]', error);
     Alert.alert('Signup failed', error.message || 'An unexpected error occurred.');
   }
 };
+
 
 
   const validateEmail = (text) => {

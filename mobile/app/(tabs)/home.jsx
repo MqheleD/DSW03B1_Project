@@ -6,15 +6,15 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  StatusBar
+  StatusBar,
+  ActivityIndicator
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
-import {ThemeContext} from "../../hooks/ThemeContext"; 
-import {Colors} from "../../constants/Colors"; 
-
+import { ThemeContext } from "../../hooks/ThemeContext";
+import { UserAuth } from "../../hooks/AuthContext";
 import { router } from 'expo-router';
 
 const eventsData = {
@@ -67,11 +67,11 @@ const eventsData = {
 export default function App() {
   const [selectedTab, setSelectedTab] = useState("Today");
   const [currentTime, setCurrentTime] = useState(new Date());
-
-  const {currentColors, isDarkMode} = useContext(ThemeContext);
+  const { currentColors, isDarkMode } = useContext(ThemeContext);
+  const { profile, loading } = UserAuth();
 
   useEffect(() => {
-    // Optional: Update current time every minute
+    // Update current time every minute
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
@@ -82,14 +82,23 @@ export default function App() {
     day: "numeric",
   });
 
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
+        <ActivityIndicator size="large" color={currentColors.primaryButton} />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
       <StatusBar style={isDarkMode ? "light" : "dark"} />
+      
       {/* Nav Bar */}
       <View style={[styles.navBar, { backgroundColor: currentColors.navBarBackground }]}>
-        <Text style={[styles.navTitle, {color: currentColors.textPrimary}]}>Home</Text>
+        <Text style={[styles.navTitle, { color: currentColors.textPrimary }]}>Home</Text>
         <View style={styles.navIcons}>
-          <TouchableOpacity style={[styles.iconButton, {backgroundColor: currentColors.cardBackground}]} onPress={() => router.push("/(screens)/Scanner")}>
+          <TouchableOpacity style={[styles.iconButton, { backgroundColor: currentColors.cardBackground }]} onPress={() => router.push("/(screens)/Scanner")}>
             <MaterialCommunityIcons name="line-scan" size={16} color={currentColors.textPrimary} />
           </TouchableOpacity>
         </View>
@@ -101,14 +110,22 @@ export default function App() {
           <View style={styles.profileImageWrapper}>
             <Image
               source={{
-                uri: "https://readdy.ai/api/search-image?query=professional%20portrait%20photo%20of%20a%20young%20woman%20with%20shoulder%20length%20brown%20hair%2C%20friendly%20smile%2C%20business%20casual%20attire%2C%20high%20quality%2C%20studio%20lighting%2C%20clean%20background%2C%20professional%20headshot&width=100&height=100&seq=1&orientation=squarish",
+                uri: profile?.avatar_url || "https://readdy.ai/api/search-image?query=professional%20portrait%20photo%20of%20a%20young%20woman%20with%20shoulder%20length%20brown%20hair%2C%20friendly%20smile%2C%20business%20casual%20attire%2C%20high%20quality%2C%20studio%20lighting%2C%20clean%20background%2C%20professional%20headshot&width=100&height=100&seq=1&orientation=squarish",
               }}
               style={styles.profileImage}
             />
             <View style={styles.onlineIndicator} />
           </View>
           <View style={{ marginLeft: 12 }}>
-            <Text style={[styles.profileName, {color: currentColors.textPrimary}]}>Hello, Emma!</Text>
+            {profile ? (
+              <Text style={[styles.profileName, { color: currentColors.textPrimary }]}>
+                Hello, {profile.full_name}!
+              </Text>
+            ) : (
+              <Text style={[styles.profileName, { color: currentColors.textSecondary }]}>
+                Hello, Guest!
+              </Text>
+            )}
             <Text style={styles.profileDate}>{formattedDate}</Text>
           </View>
         </View>
@@ -116,17 +133,17 @@ export default function App() {
         {/* Quick Actions */}
         <View style={styles.quickActions}>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: currentColors.cardBackground }]}
+            style={[styles.actionButton, { backgroundColor: currentColors.cardBackground }]} onPress={() => router.push("/(screens)/Scanner")}
           >
             <View
               style={[styles.actionIconCircle, { backgroundColor: "#dbeafe" }]}
             >
               <FontAwesome5 name="qrcode" size={20} color="#2563eb" />
             </View>
-            <Text style={[styles.actionText, {color: currentColors.textSecondary}]}>Scan QR Code</Text>
+            <Text style={[styles.actionText, { color: currentColors.textSecondary }]}>Scan QR Code</Text>
           </TouchableOpacity>
           <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: currentColors.cardBackground }]}
+            style={[styles.actionButton, { backgroundColor: currentColors.cardBackground }]} onPress={() => router.push("/(screens)/ShareDetails")}
 
           >
             <View
@@ -134,7 +151,7 @@ export default function App() {
             >
               <FontAwesome5 name="share-alt" size={20} color="#7c3aed" />
             </View>
-            <Text style={[styles.actionText, {color: currentColors.textSecondary}]}>Share Details</Text>
+            <Text style={[styles.actionText, { color: currentColors.textSecondary }]}>Share Details</Text>
           </TouchableOpacity>
         </View>
 
@@ -166,14 +183,14 @@ export default function App() {
               </View>
             </View>
           </View>
-          <TouchableOpacity style={[styles.joinButton, {backgroundColor: currentColors.secondaryButton}]} onPress={() => router.push('/(screens)/Scanner')}>
+          <TouchableOpacity style={[styles.joinButton, { backgroundColor: currentColors.secondaryButton }]} onPress={() => router.push('/(screens)/Scanner')}>
             <Text style={styles.joinButtonText}>Check In</Text>
           </TouchableOpacity>
         </View>
 
         {/* My Events Section */}
         <View style={{ marginTop: 24 }}>
-          <Text style={[styles.sectionTitle, {color: currentColors.textPrimary}]}>My Events</Text>
+          <Text style={[styles.sectionTitle, { color: currentColors.textPrimary }]}>My Events</Text>
 
           {/* Tab Switcher */}
           <View style={[styles.tabSwitcher, { backgroundColor: currentColors.secondaryButton }]}>
@@ -182,13 +199,13 @@ export default function App() {
                 key={tab}
                 onPress={() => setSelectedTab(tab)}
                 style={[
-                  [styles.tabButton, ],
-                  selectedTab === tab && {backgroundColor: currentColors.primaryButton},
+                  [styles.tabButton,],
+                  selectedTab === tab && { backgroundColor: currentColors.primaryButton },
                 ]}
               >
                 <Text
                   style={[
-                    {color: currentColors.textSecondary, fontWeight: "500"},
+                    { color: currentColors.textSecondary, fontWeight: "500" },
                     selectedTab === tab && { color: "white" },
                   ]}
                 >
@@ -200,76 +217,81 @@ export default function App() {
 
           {/* Events List */}
           <View style={{ marginTop: 16 }}>
-            {eventsData[selectedTab].map((event) => (
-              <View key={event.id} style={[styles.eventCard, { backgroundColor: currentColors.cardBackground }]}>
-                <View style={styles.eventCardHeader}>
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <View
-                      style={[
-                        styles.eventColorBar,
-                        { backgroundColor: event.color },
-                      ]}
-                    />
-                    <View>
-                      <Text style={styles.eventTitle}>{event.title}</Text>
-                      <View style={styles.eventTimeRow}>
-                        <FontAwesome5
-                          name="clock"
-                          size={12}
-                          color={{color: currentColors.textSecondary}}
-                          style={{ marginRight: 4 }}
-                        />
-                        <Text style={[styles.eventTimeText, {color: currentColors.textSecondary}]}>{event.time}</Text>
+            {eventsData[selectedTab].length === 0 ? (
+              <Text style={{ color: currentColors.textSecondary, textAlign: "center", marginTop: 'auto' }}>
+                No event data for {selectedTab}
+              </Text>
+            ) : (
+              eventsData[selectedTab].map((event) => (
+                <View key={event.id} style={[styles.eventCard, { backgroundColor: currentColors.cardBackground }]}>
+                  <View style={styles.eventCardHeader}>
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      <View
+                        style={[
+                          styles.eventColorBar,
+                          { backgroundColor: event.color },
+                        ]}
+                      />
+                      <View>
+                        <Text style={styles.eventTitle}>{event.title}</Text>
+                        <View style={styles.eventTimeRow}>
+                          <FontAwesome5
+                            name="clock"
+                            size={12}
+                            color={{ color: currentColors.textSecondary }}
+                            style={{ marginRight: 4 }}
+                          />
+                          <Text style={[styles.eventTimeText, { color: currentColors.textSecondary }]}>{event.time}</Text>
+                        </View>
                       </View>
                     </View>
-                  </View>
 
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <View style={styles.participantsStack}>
-                      {[...Array(Math.min(3, event.participants))].map(
-                        (_, i) => (
-                          <Image
-                            key={i}
-                            source={{
-                              uri: `https://readdy.ai/api/search-image?query=professional%20portrait%20headshot%2C%20business%20attire%2C%20neutral%20background%2C%20high%20quality%2C%20studio%20lighting&width=50&height=50&seq=${
-                                event.id * 10 + i
-                              }&orientation=squarish`,
-                            }}
-                            style={[styles.participantImage, { left: i * -10 }]}
-                          />
-                        )
-                      )}
-                      {event.participants > 3 && (
-                        <View
-                          style={[styles.moreParticipants, { left: 3 * -10 }]}
-                        >
-                          <Text style={styles.moreParticipantsText}>
-                            +{event.participants - 3}
-                          </Text>
-                        </View>
-                      )}
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      <View style={styles.participantsStack}>
+                        {[...Array(Math.min(3, event.participants))].map(
+                          (_, i) => (
+                            <Image
+                              key={i}
+                              source={{
+                                uri: `https://readdy.ai/api/search-image?query=professional%20portrait%20headshot%2C%20business%20attire%2C%20neutral%20background%2C%20high%20quality%2C%20studio%20lighting&width=50&height=50&seq=${event.id * 10 + i
+                                  }&orientation=squarish`,
+                              }}
+                              style={[styles.participantImage, { left: i * -10 }]}
+                            />
+                          )
+                        )}
+                        {event.participants > 3 && (
+                          <View
+                            style={[styles.moreParticipants, { left: 3 * -10 }]}
+                          >
+                            <Text style={styles.moreParticipantsText}>
+                              +{event.participants - 3}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      <TouchableOpacity style={styles.chevronButton}>
+                        <FontAwesome5
+                          name="chevron-right"
+                          size={12}
+                          color="#9ca3af"
+                        />
+                      </TouchableOpacity>
                     </View>
-                    <TouchableOpacity style={styles.chevronButton}>
-                      <FontAwesome5
-                        name="chevron-right"
-                        size={12}
-                        color="#9ca3af"
-                      />
-                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.eventLocationRow}>
+                    <FontAwesome5
+                      name="map-marker-alt"
+                      size={12}
+                      color="#6b7280"
+                      style={{ marginRight: 4 }}
+                    />
+                    <Text style={[styles.eventLocationText, { color: currentColors.textSecondary }]}>{event.location}</Text>
                   </View>
                 </View>
-
-                <View style={styles.eventLocationRow}>
-                  <FontAwesome5
-                    name="map-marker-alt"
-                    size={12}
-                    color="#6b7280"
-                    style={{ marginRight: 4 }}
-                  />
-                  <Text style={[styles.eventLocationText, {color: currentColors.textSecondary}]}>{event.location}</Text>
-                </View>
-              </View>
-            ))}
+              ))
+            )}
           </View>
         </View>
       </ScrollView>
