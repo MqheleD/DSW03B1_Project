@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
@@ -22,39 +22,58 @@ import { ThemeContext } from '@/hooks/ThemeContext';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import 'react-native-url-polyfill/auto';
 import { decode } from 'base64-arraybuffer';
+import 'react-native-url-polyfill/auto';
 import supabase from '@/app/supabaseClient';
 
 export default function Settings() {
-  const [username, setUsername] = useState("");
   const [socialLink, setSocialLink] = useState('');
   const [socialLinks, setSocialLinks] = useState([]);
   const { signOut, profile, updateProfile } = UserAuth();
   const [uploading, setUploading] = useState(false);
-
   const [profileImage, setProfileImage] = useState(
-    profile?.avatar_url || "https://readdy.ai/api/search-image?query=professional%20portrait%20photo%20of%20a%20young%20woman%20with%20shoulder%20length%20brown%20hair%2C%20friendly%20smile%2C%20business%20casual%20attire%2C%20high%20quality%2C%20studio%20lighting%2C%20clean%20background%2C%20professional%20headshot&width=100&height=100&seq=1&orientation=squarish",
+    profile?.avatar_url || "https://example.com/default-avatar.jpg"
   );
+  const { isDarkMode, currentColors, setIsDarkMode } = useContext(ThemeContext);
 
-  const { isDarkMode, toggleTheme, currentColors, setIsDarkMode } =
-    useContext(ThemeContext);
+  // Load social links on component mount
+  useEffect(() => {
+    const loadSocialLinks = async () => {
+      try {
+        const storedLinks = await AsyncStorage.getItem('socialLinks');
+        if (storedLinks) {
+          setSocialLinks(JSON.parse(storedLinks));
+        }
+      } catch (error) {
+        console.error('Error loading social links:', error);
+      }
+    };
+    
+    loadSocialLinks();
+  }, []);
 
-  const handleThemeToggle = () => {
-    setIsDarkMode(!isDarkMode);
-  };
-
-  const handleAddSocialLink = () => {
+  const handleAddSocialLink = async () => {
     if (socialLink.trim()) {
-      setSocialLinks([...socialLinks, socialLink.trim()]);
+      const newLinks = [...socialLinks, socialLink.trim()];
+      setSocialLinks(newLinks);
       setSocialLink('');
+      try {
+        await AsyncStorage.setItem('socialLinks', JSON.stringify(newLinks));
+      } catch (error) {
+        Alert.alert('Error', 'Failed to save social link');
+      }
     }
   };
 
-  const handleRemoveSocialLink = (index) => {
+  const handleRemoveSocialLink = async (index) => {
     const updatedLinks = [...socialLinks];
     updatedLinks.splice(index, 1);
     setSocialLinks(updatedLinks);
+    try {
+      await AsyncStorage.setItem('socialLinks', JSON.stringify(updatedLinks));
+    } catch (error) {
+      Alert.alert('Error', 'Failed to remove social link');
+    }
   };
 
   const pickImage = async () => {
@@ -77,131 +96,62 @@ export default function Settings() {
     }
   };
 
-  // const uploadImage = async (base64Data) => {
-  //   if (!profile?.id) {
-  //     Alert.alert('Error', 'User not authenticated');
-  //     return;
-  //   }
+  const uploadImage = async (base64Data) => {
+    try {
+      setUploading(true);
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-  //   try {
-  //     setUploading(true);
-      
-  //     const fileName = `avatar_${profile.id}_${Date.now()}.jpg`;
-  //     const filePath = `${fileName}`;
-      
-  //     const { error } = await supabase.storage
-  //       .from('avatars')
-  //       .upload(filePath, decode(base64Data), {
-  //         contentType: 'image/jpeg',
-  //         upsert: true,
-  //       });
+      if (userError || !user) {
+        Alert.alert('Error', 'User not authenticated');
+        return;
+      }
 
-  //     if (error) {
-  //       throw error;
-  //     }
+      const fileName = `avatar_${user.id}_${Date.now()}.jpg`;
+      const filePath = `${fileName}`;
 
-  //     const { data: { publicUrl } } = supabase
-  //       .storage
-  //       .from('avatars')
-  //       .getPublicUrl(filePath);
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, decode(base64Data), {
+          contentType: 'image/jpeg',
+          upsert: true,
+        });
 
-  //     // Update user profile in database
-  //     const { data, error: updateError } = await supabase
-  //       .from('attendees')
-  //       .update({
-  //         avatar_url: publicUrl,
-  //         updated_at: new Date().toISOString(),
-  //       })
-  //       .eq('id', profile.id)
-  //       .select();
+      if (uploadError) throw uploadError;
 
-  //     if (updateError) {
-  //       throw updateError;
-  //     }
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
 
-  //     // Update local state and storage
-  //     setProfileImage(publicUrl);
-  //     updateProfile({ ...profile, avatar_url: publicUrl });
-      
-  //     Alert.alert('Success', 'Profile image updated!');
-      
-  //   } catch (error) {
-  //     console.error('Upload error:', error);
-  //     Alert.alert('Upload failed', error.message || 'Could not upload image');
-  //   } finally {
-  //     setUploading(false);
-  //   }
-  // };
+      const { error: updateError } = await supabase
+        .from('attendees')
+        .update({
+          avatar_url: publicUrl,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
 
-const uploadImage = async (base64Data) => {
-  try {
-    setUploading(true);
+      if (updateError) throw updateError;
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      Alert.alert('Error', 'User not authenticated');
-      return;
+      setProfileImage(publicUrl);
+      updateProfile({ ...profile, avatar_url: publicUrl });
+      Alert.alert('Success', 'Profile image updated!');
+    } catch (error) {
+      Alert.alert('Upload failed', error.message || 'Could not upload image');
+    } finally {
+      setUploading(false);
     }
-
-    const fileName = `avatar_${user.id}_${Date.now()}.jpg`;
-    const filePath = `${fileName}`;
-
-    // Upload to Supabase Storage
-    const { error: uploadError } = await supabase.storage
-      .from('avatars')
-      .upload(filePath, decode(base64Data), {
-        contentType: 'image/jpeg',
-        upsert: true,
-      });
-
-    if (uploadError) {
-      throw uploadError;
-    }
-
-    // Get public URL
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from('avatars').getPublicUrl(filePath);
-
-    // Update image_url for the authenticated user
-    const { error: updateError } = await supabase
-      .from('attendees')
-      .update({
-        avatar_url: publicUrl,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', user.id); // ✅ id = auth.uid()
-
-    if (updateError) {
-      throw updateError;
-    }
-
-    setProfileImage(publicUrl);
-    updateProfile({ ...profile, image_url: publicUrl });
-
-    Alert.alert('Success', 'Profile image updated!');
-  } catch (error) {
-    console.error('Upload error:', error);
-    Alert.alert('Upload failed', error.message || 'Could not upload image');
-  } finally {
-    setUploading(false);
-  }
-};
-
+  };
 
   const handleLogout = async () => {
     try {
       await signOut();
-      await AsyncStorage.removeItem('session');
-      await AsyncStorage.removeItem('profile');
+      await AsyncStorage.removeItem('socialLinks');
       router.replace('/(forms)/Login');
     } catch (error) {
       console.log("Logout error:", error);
     }
+  };
+
+  const toggleTheme = () => {
+    setIsDarkMode(!isDarkMode);
   };
 
   return (

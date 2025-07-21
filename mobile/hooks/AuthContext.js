@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import supabase from "@/app/supabaseClient"; // Notice default import here
+import supabase from "@/app/supabaseClient";
 
 export const AuthContext = createContext();
 
@@ -19,14 +19,12 @@ export const AuthContextProvider = ({ children }) => {
 
         if (storedSession) {
           setSession(JSON.parse(storedSession));
-          console.log("[AuthContext] Loaded session from AsyncStorage");
         }
         if (storedProfile) {
           setProfile(JSON.parse(storedProfile));
-          console.log("[AuthContext] Loaded profile from AsyncStorage");
         }
       } catch (error) {
-        console.error("[AuthContext] Error loading stored data:", error);
+        console.error("Error loading stored data:", error);
       } finally {
         setLoading(false);
       }
@@ -36,8 +34,6 @@ export const AuthContextProvider = ({ children }) => {
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        console.log("[AuthContext] Auth state changed:", event);
-
         try {
           if (profileSubscription) {
             profileSubscription.unsubscribe();
@@ -55,27 +51,28 @@ export const AuthContextProvider = ({ children }) => {
               .maybeSingle();
 
             if (profileError) {
-              console.error("[AuthContext] Profile fetch error:", profileError);
               setProfile(null);
               await AsyncStorage.removeItem("profile");
             } else {
               setProfile(profileData || null);
               if (profileData) {
                 await AsyncStorage.setItem("profile", JSON.stringify(profileData));
-                console.log("[AuthContext] Profile found:", profileData);
               } else {
                 await AsyncStorage.removeItem("profile");
               }
             }
 
-            // Subscribe to realtime updates on this user's attendee row
             profileSubscription = supabase
               .channel(`public:attendees:id=eq.${newSession.user.id}`)
               .on(
                 "postgres_changes",
-                { event: "*", schema: "public", table: "attendees", filter: `id=eq.${newSession.user.id}` },
+                { 
+                  event: "*", 
+                  schema: "public", 
+                  table: "attendees", 
+                  filter: `id=eq.${newSession.user.id}` 
+                },
                 (payload) => {
-                  console.log("[AuthContext] Realtime profile update:", payload);
                   if (payload.eventType === "UPDATE" || payload.eventType === "INSERT") {
                     setProfile(payload.new);
                     AsyncStorage.setItem("profile", JSON.stringify(payload.new));
@@ -94,7 +91,7 @@ export const AuthContextProvider = ({ children }) => {
             await AsyncStorage.removeItem("profile");
           }
         } catch (error) {
-          console.error("[AuthContext] Auth state change error:", error);
+          console.error("Auth state change error:", error);
         }
       }
     );
@@ -109,7 +106,6 @@ export const AuthContextProvider = ({ children }) => {
     };
   }, []);
 
-
   const signInUser = async (email, password) => {
     try {
       const { data: signInData, error } = await supabase.auth.signInWithPassword({
@@ -118,7 +114,6 @@ export const AuthContextProvider = ({ children }) => {
       });
 
       if (error) {
-        console.warn("[AuthContext] Sign-in error:", error.message);
         return { success: false, message: error.message };
       }
 
@@ -133,7 +128,6 @@ export const AuthContextProvider = ({ children }) => {
         .maybeSingle();
 
       if (profileError) {
-        console.warn("[AuthContext] Profile fetch error:", profileError.message);
         return { success: false, message: "Could not load profile." };
       }
 
@@ -147,7 +141,6 @@ export const AuthContextProvider = ({ children }) => {
 
       return { success: true, profile: profileData };
     } catch (error) {
-      console.error("[AuthContext] Unexpected login error:", error);
       return { success: false, message: "An unexpected error occurred." };
     }
   };
@@ -157,13 +150,11 @@ export const AuthContextProvider = ({ children }) => {
       const { data, error } = await supabase.auth.signUp({ email, password });
 
       if (error) {
-        console.warn("[AuthContext] Sign-up error:", error.message);
         return { success: false, message: error.message };
       }
 
       return { success: true, data };
     } catch (error) {
-      console.error("[AuthContext] Unexpected sign-up error:", error);
       return { success: false, message: "An unexpected error occurred." };
     }
   };
@@ -173,7 +164,7 @@ export const AuthContextProvider = ({ children }) => {
       const { error } = await supabase.auth.signOut();
 
       if (error) {
-        console.warn("[AuthContext] Logout error:", error.message);
+        console.warn("Logout error:", error.message);
         return;
       }
 
@@ -182,7 +173,7 @@ export const AuthContextProvider = ({ children }) => {
       await AsyncStorage.removeItem("session");
       await AsyncStorage.removeItem("profile");
     } catch (error) {
-      console.error("[AuthContext] Logout failed:", error);
+      console.error("Logout failed:", error);
     }
   };
 
@@ -191,7 +182,7 @@ export const AuthContextProvider = ({ children }) => {
       setProfile(newProfile);
       await AsyncStorage.setItem("profile", JSON.stringify(newProfile));
     } catch (error) {
-      console.error("[AuthContext] Failed to update local profile:", error);
+      console.error("Failed to update local profile:", error);
     }
   };
 
