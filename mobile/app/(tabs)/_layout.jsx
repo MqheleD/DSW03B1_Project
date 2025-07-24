@@ -5,10 +5,8 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { ThemeContext } from "../../hooks/ThemeContext";
 import React, { useContext } from "react";
 
-
 export default function TabsLayout() {
-
-  const {currentColors} = useContext(ThemeContext);
+  const { currentColors } = useContext(ThemeContext);
 
   return (
     <Tabs

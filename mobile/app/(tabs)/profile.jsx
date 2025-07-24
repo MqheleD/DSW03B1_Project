@@ -161,12 +161,12 @@ export default function ProfileScreen() {
                 </View>
 
                 {/* Logout Button */}
-                <TouchableOpacity 
+                {/* <TouchableOpacity 
                     style={[styles.logoutButton, { backgroundColor: currentColors.secondaryButton }]}
                     onPress={handleLogout}
                 >
                     <Text style={[styles.logoutButtonText, { color: currentColors.textPrimary }]}>Log Out</Text>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
             </ScrollView>
         </SafeAreaView>
     );
