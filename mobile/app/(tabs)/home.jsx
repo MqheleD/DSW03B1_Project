@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect, useContext } from "react";
 import {
   View,
   Text,
   Image,
+  Modal,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
@@ -24,21 +26,21 @@ const eventsData = {
       title: "Animation",
       time: "10:00 AM - 11:30 AM",
       location: "Conference Room A",
-      color: "#3b82f6", // blue-500
+      color: "#3b82f6",
     },
     {
       id: 2,
       title: "Film",
       time: "2:00 PM - 3:30 PM",
       location: "Virtual Meeting",
-      color: "#8b5cf6", // purple-500
+      color: "#8b5cf6",
     },
     {
       id: 3,
       title: "VFX",
       time: "4:00 PM - 4:30 PM",
       location: "Phone",
-      color: "#22c55e", // green-500
+      color: "#22c55e",
     },
   ],
   Tomorrow: [
@@ -47,33 +49,33 @@ const eventsData = {
       title: "Virtual Production",
       time: "9:00 AM - 12:00 PM",
       location: "Innovation Lab",
-      color: "#ec4899", // pink-500
+      color: "#ec4899",
     },
     {
       id: 5,
       title: "AI",
       time: "12:30 PM - 1:30 PM",
       location: "Bistro Garden",
-      color: "#eab308", // yellow-500
+      color: "#eab308",
     },
     {
       id: 6,
       title: "Interactive Technology",
       time: "12:30 PM - 1:30 PM",
       location: "Bistro Garden",
-      color: "#eab308", // yellow-500
+      color: "#eab308",
     },
   ],
 };
 
 export default function App() {
+  const [modalVisible, setModalVisible] = useState(false);
   const [selectedTab, setSelectedTab] = useState("Today");
   const [currentTime, setCurrentTime] = useState(new Date());
   const { currentColors, isDarkMode } = useContext(ThemeContext);
   const { profile, loading } = UserAuth();
 
   useEffect(() => {
-    // Update current time every minute
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
@@ -87,10 +89,7 @@ export default function App() {
   if (loading) {
     return (
       <SafeAreaView
-        style={[
-          styles.container,
-          { backgroundColor: currentColors.background },
-        ]}
+        style={[styles.container, { backgroundColor: currentColors.background }]}
       >
         <ActivityIndicator size="large" color={currentColors.primaryButton} />
       </SafeAreaView>
@@ -115,10 +114,7 @@ export default function App() {
         </Text>
         <View style={styles.navIcons}>
           <TouchableOpacity
-            style={[
-              styles.iconButton,
-              { backgroundColor: currentColors.cardBackground },
-            ]}
+            style={[styles.iconButton, { backgroundColor: currentColors.cardBackground }]}
             onPress={() => router.push("/(screens)/Scanner")}
           >
             <MaterialCommunityIcons
@@ -146,21 +142,11 @@ export default function App() {
           </View>
           <View style={{ marginLeft: 12 }}>
             {profile ? (
-              <Text
-                style={[
-                  styles.profileName,
-                  { color: currentColors.textPrimary },
-                ]}
-              >
+              <Text style={[styles.profileName, { color: currentColors.textPrimary }]}>
                 Hello, {profile.full_name}!
               </Text>
             ) : (
-              <Text
-                style={[
-                  styles.profileName,
-                  { color: currentColors.textSecondary },
-                ]}
-              >
+              <Text style={[styles.profileName, { color: currentColors.textSecondary }]}>
                 Hello, Guest!
               </Text>
             )}
@@ -171,117 +157,68 @@ export default function App() {
         {/* Quick Actions */}
         <View style={styles.quickActions}>
           <TouchableOpacity
-            style={[
-              styles.actionButton,
-              { backgroundColor: currentColors.cardBackground },
-            ]}
+            style={[styles.actionButton, { backgroundColor: currentColors.cardBackground }]}
             onPress={() => router.push("/(screens)/Scanner")}
           >
-            <View
-              style={[styles.actionIconCircle, { backgroundColor: "#dbeafe" }]}
-            >
+            <View style={[styles.actionIconCircle, { backgroundColor: "#dbeafe" }]}>
               <FontAwesome5 name="qrcode" size={20} color="#2563eb" />
             </View>
-            <Text
-              style={[
-                styles.actionText,
-                { color: currentColors.textSecondary },
-              ]}
-            >
+            <Text style={[styles.actionText, { color: currentColors.textSecondary }]}>
               Scan QR Code
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[
-              styles.actionButton,
-              { backgroundColor: currentColors.cardBackground },
-            ]}
+            style={[styles.actionButton, { backgroundColor: currentColors.cardBackground }]}
             onPress={() => router.push("/(screens)/ShareDetails")}
           >
-            <View
-              style={[styles.actionIconCircle, { backgroundColor: "#ede9fe" }]}
-            >
+            <View style={[styles.actionIconCircle, { backgroundColor: "#ede9fe" }]}>
               <FontAwesome5 name="share-alt" size={20} color="#7c3aed" />
             </View>
-            <Text
-              style={[
-                styles.actionText,
-                { color: currentColors.textSecondary },
-              ]}
-            >
+            <Text style={[styles.actionText, { color: currentColors.textSecondary }]}>
               Share Details
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Upcoming Event Banner */}
-        <View
-          style={[
-            styles.upcomingEvent,
-            { backgroundColor: currentColors.primaryButton },
-          ]}
-        >
+        <View style={[styles.upcomingEvent, { backgroundColor: currentColors.primaryButton }]}>
           <View style={styles.upcomingEventTop}>
             <View>
               <Text style={styles.nextEventLabel}>NEXT EVENT</Text>
               <Text style={styles.nextEventTitle}>Team Meeting</Text>
               <View style={styles.upcomingEventRow}>
-                <FontAwesome5
-                  name="clock"
-                  size={12}
-                  color="rgba(255,255,255,0.8)"
-                  style={{ marginRight: 4 }}
-                />
-                <Text style={styles.upcomingEventText}>
-                  10:00 AM - 11:30 AM
-                </Text>
+                <FontAwesome5 name="clock" size={12} color="rgba(255,255,255,0.8)" style={{ marginRight: 4 }} />
+                <Text style={styles.upcomingEventText}>10:00 AM - 11:30 AM</Text>
               </View>
               <View style={styles.upcomingEventRow}>
-                <FontAwesome5
-                  name="map-marker-alt"
-                  size={12}
-                  color="rgba(255,255,255,0.8)"
-                  style={{ marginRight: 4 }}
-                />
+                <FontAwesome5 name="map-marker-alt" size={12} color="rgba(255,255,255,0.8)" style={{ marginRight: 4 }} />
                 <Text style={styles.upcomingEventText}>Conference Room A</Text>
               </View>
             </View>
           </View>
           <TouchableOpacity
-            style={[
-              styles.joinButton,
-              { backgroundColor: currentColors.secondaryButton },
-            ]}
+            style={[styles.joinButton, { backgroundColor: currentColors.secondaryButton }]}
             onPress={() => router.push("/(screens)/Scanner")}
           >
             <Text style={styles.joinButtonText}>Check In</Text>
           </TouchableOpacity>
         </View>
 
-        {/* My Events Section */}
+        {/* My Events */}
         <View style={{ marginTop: 24 }}>
-          <Text
-            style={[styles.sectionTitle, { color: currentColors.textPrimary }]}
-          >
+          <Text style={[styles.sectionTitle, { color: currentColors.textPrimary }]}>
             My Events
           </Text>
 
           {/* Tab Switcher */}
-          <View
-            style={[
-              styles.tabSwitcher,
-              { backgroundColor: currentColors.secondaryButton },
-            ]}
-          >
+          <View style={[styles.tabSwitcher, { backgroundColor: currentColors.secondaryButton }]}>
             {["Today", "Tomorrow"].map((tab) => (
               <TouchableOpacity
                 key={tab}
                 onPress={() => setSelectedTab(tab)}
                 style={[
-                  [styles.tabButton],
-                  selectedTab === tab && {
-                    backgroundColor: currentColors.primaryButton,
-                  },
+                  styles.tabButton,
+                  selectedTab === tab && { backgroundColor: currentColors.primaryButton },
                 ]}
               >
                 <Text
@@ -296,84 +233,62 @@ export default function App() {
             ))}
           </View>
 
-          {/* Events List */}
+          {/* Modal */}
+          <Modal
+            transparent={true}
+            animationType="slide"
+            visible={modalVisible}
+            onRequestClose={() => setModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContainer}>
+                <Text style={styles.modalText}>Add the information here</Text>
+                <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
+                  <Text style={styles.modalButtons}>Close Modal</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+
+          {/* Event List */}
           <View style={{ marginTop: 16 }}>
             {eventsData[selectedTab].length === 0 ? (
-              <Text
-                style={{
-                  color: currentColors.textSecondary,
-                  textAlign: "center",
-                  marginTop: "auto",
-                }}
-              >
+              <Text style={{ color: currentColors.textSecondary, textAlign: "center", marginTop: "auto" }}>
                 No event data for {selectedTab}
               </Text>
             ) : (
               eventsData[selectedTab].map((event) => (
-                <View
-                  key={event.id}
-                  style={[
-                    styles.eventCard,
-                    { backgroundColor: currentColors.cardBackground },
-                  ]}
-                >
+                <View key={event.id} style={[styles.eventCard, { backgroundColor: currentColors.cardBackground }]}>
                   <View style={styles.eventCardHeader}>
-                    <View
-                      style={{ flexDirection: "row", alignItems: "center" }}
-                    >
-                      <View
-                        style={[
-                          styles.eventColorBar,
-                          { backgroundColor: event.color },
-                        ]}
-                      />
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      <View style={[styles.eventColorBar, { backgroundColor: event.color }]} />
                       <View>
                         <Text style={styles.eventTitle}>{event.title}</Text>
                         <View style={styles.eventTimeRow}>
                           <FontAwesome5
                             name="clock"
                             size={12}
-                            color={{ color: currentColors.textSecondary }}
+                            color={currentColors.textSecondary}
                             style={{ marginRight: 4 }}
                           />
-                          <Text
-                            style={[
-                              styles.eventTimeText,
-                              { color: currentColors.textSecondary },
-                            ]}
-                          >
+                          <Text style={[styles.eventTimeText, { color: currentColors.textSecondary }]}>
                             {event.time}
                           </Text>
                         </View>
                       </View>
                     </View>
 
-                    <View
-                      style={{ flexDirection: "row", alignItems: "center" }}
+                    <TouchableOpacity
+                      style={styles.chevronButton}
+                      onPress={() => setModalVisible(true)}
                     >
-                      <TouchableOpacity style={styles.chevronButton}>
-                        <FontAwesome5
-                          name="chevron-right"
-                          size={12}
-                          color="#9ca3af"
-                        />
-                      </TouchableOpacity>
-                    </View>
+                      <FontAwesome5 name="chevron-right" size={12} color="#9ca3af" />
+                    </TouchableOpacity>
                   </View>
 
                   <View style={styles.eventLocationRow}>
-                    <FontAwesome5
-                      name="map-marker-alt"
-                      size={12}
-                      color="#6b7280"
-                      style={{ marginRight: 4 }}
-                    />
-                    <Text
-                      style={[
-                        styles.eventLocationText,
-                        { color: currentColors.textSecondary },
-                      ]}
-                    >
+                    <FontAwesome5 name="map-marker-alt" size={12} color="#6b7280" style={{ marginRight: 4 }} />
+                    <Text style={[styles.eventLocationText, { color: currentColors.textSecondary }]}>
                       {event.location}
                     </Text>
                   </View>
@@ -697,4 +612,47 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
   },
+   modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContainer: {
+    width: "80%",
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 24,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  modalText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#111827",
+    textAlign: "center",
+  },
+  closeButton: {
+    marginTop: 20,
+    backgroundColor: "#3b82f6",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+  },
+  modalButtons: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 14,
+    textAlign: "center",
+  },
+
 });
+
+
+
+
+
