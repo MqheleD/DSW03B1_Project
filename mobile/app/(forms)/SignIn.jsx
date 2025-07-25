@@ -404,7 +404,7 @@ const handleSignup = async () => {
               </View>
 
               <View style={{ marginLeft: "50%", marginTop: openInterest ? 250 : "10%" }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop:'40%',marginBttom:'6%'}}>
                   <Text style={{ fontSize: 16, marginRight: 5 }}>Sign Up</Text>
                   <TouchableOpacity
                     onPress={handleSignup}
@@ -422,7 +422,7 @@ const handleSignup = async () => {
                 </View>
 
                 <TouchableOpacity onPress={() => router.navigate('/(forms)/Login')}>
-                  <Text style={styles.linkText}>Log in?</Text>
+                  <Text style={styles.linkText}>Login?</Text>
                 </TouchableOpacity>
               </View>
             </>

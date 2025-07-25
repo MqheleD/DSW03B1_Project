@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
@@ -26,7 +27,7 @@ export default function Login() {
 
   useEffect(() => {
     if (session) {
-      router.replace('/(tabs)/home'); // 🚀 already logged in
+      router.replace('/(tabs)/Speaker'); // 🚀 already logged in
     }
   }, [session]);
 
@@ -50,11 +51,12 @@ const handleLogin = async () => {
     const result = await signInUser(email, password);
     if (result.success) {
       // const fullName = result.profile.full_name || result.profile.name || 'User';
-      // Alert.alert(`Welcome back, ${fullName}!`);
+      // Alert.alert(Welcome back, ${fullName}!);
       
       
       // Alert.prompt(user)
-      router.replace('/(tabs)/home');
+      // router.replace('/(tabs)/home');
+      // router.replace('/(screens)/Speaker');
     } else {
       Alert.alert('Login failed', result.message || 'Invalid credentials.');
     }
@@ -114,7 +116,7 @@ const handleLogin = async () => {
         </View>
 
         <View style={styles.buttonWrapper}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' ,marginTop:'40%',marginBottom:'6%'}}>
             <Text style={{ fontSize: 16, marginRight: 5 }}>Login</Text>
             <TouchableOpacity onPress={handleLogin} style={styles.loginButton}>
               <Ionicons name="arrow-forward" size={24} color="white" />
@@ -198,6 +200,7 @@ const styles = StyleSheet.create({
     color: 'black',
     textDecorationLine: 'underline',
     fontSize: 16,
+    marginRight:14
   },
   buttonWrapper: {
     width: '100%',
