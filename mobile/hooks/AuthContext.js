@@ -33,7 +33,7 @@ export const AuthContextProvider = ({ children }) => {
     loadStoredData();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
+      async (_event, newSession) => {
         try {
           if (profileSubscription) {
             profileSubscription.unsubscribe();
@@ -51,26 +51,26 @@ export const AuthContextProvider = ({ children }) => {
               .maybeSingle();
 
             if (profileError) {
+              console.error("Error fetching profile:", profileError.message);
               setProfile(null);
               await AsyncStorage.removeItem("profile");
             } else {
               setProfile(profileData || null);
               if (profileData) {
                 await AsyncStorage.setItem("profile", JSON.stringify(profileData));
-              } else {
-                await AsyncStorage.removeItem("profile");
               }
             }
 
+            // Subscribe to changes for role updates etc.
             profileSubscription = supabase
               .channel(`public:attendees:id=eq.${newSession.user.id}`)
               .on(
                 "postgres_changes",
-                { 
-                  event: "*", 
-                  schema: "public", 
-                  table: "attendees", 
-                  filter: `id=eq.${newSession.user.id}` 
+                {
+                  event: "*",
+                  schema: "public",
+                  table: "attendees",
+                  filter: `id=eq.${newSession.user.id}`,
                 },
                 (payload) => {
                   if (payload.eventType === "UPDATE" || payload.eventType === "INSERT") {
@@ -117,57 +117,52 @@ export const AuthContextProvider = ({ children }) => {
         return { success: false, message: error.message };
       }
 
-      if (!signInData || !signInData.user) {
-        return { success: false, message: "Invalid sign-in response." };
-      }
-
       const { data: profileData, error: profileError } = await supabase
         .from("attendees")
         .select("*")
         .eq("id", signInData.user.id)
         .maybeSingle();
 
-      if (profileError) {
-        return { success: false, message: "Could not load profile." };
+      if (profileError || !profileData) {
+        return { success: false, message: "Profile not found." };
       }
 
       setSession(signInData.session);
       setProfile(profileData);
 
       await AsyncStorage.setItem("session", JSON.stringify(signInData.session));
-      if (profileData) {
-        await AsyncStorage.setItem("profile", JSON.stringify(profileData));
-      }
+      await AsyncStorage.setItem("profile", JSON.stringify(profileData));
 
       return { success: true, profile: profileData };
     } catch (error) {
-      return { success: false, message: "An unexpected error occurred." };
+      return { success: false, message: "Unexpected error during sign-in." };
     }
   };
 
-  const signUpNewUser = async (email, password) => {
+  const signUpNewUser = async (email, password, role = "attendee") => {
     try {
       const { data, error } = await supabase.auth.signUp({ email, password });
 
-      if (error) {
-        return { success: false, message: error.message };
+      if (error) return { success: false, message: error.message };
+
+      // Optionally, insert user into attendees with role
+      if (data.user) {
+        await supabase.from("attendees").insert({
+          id: data.user.id,
+          email,
+          role,
+        });
       }
 
       return { success: true, data };
     } catch (error) {
-      return { success: false, message: "An unexpected error occurred." };
+      return { success: false, message: "Unexpected error during sign-up." };
     }
   };
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-
-      if (error) {
-        console.warn("Logout error:", error.message);
-        return;
-      }
-
+      await supabase.auth.signOut();
       setSession(null);
       setProfile(null);
       await AsyncStorage.removeItem("session");
@@ -191,10 +186,11 @@ export const AuthContextProvider = ({ children }) => {
       value={{
         session,
         profile,
+        role: profile?.role ?? null, // Easily access role anywhere
         loading,
         signInUser,
-        signOut,
         signUpNewUser,
+        signOut,
         updateProfile,
       }}
     >
