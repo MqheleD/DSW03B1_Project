@@ -13,8 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { ThemeContext } from "../../hooks/ThemeContext";
-import { UserAuth } from "../../hooks/AuthContext";
+import { ThemeContext } from "@/hooks/ThemeContext";
+import { UserAuth } from "@/hooks/AuthContext";
 import { router } from 'expo-router';
 
 const { width } = Dimensions.get('window');

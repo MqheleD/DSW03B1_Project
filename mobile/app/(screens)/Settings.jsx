@@ -34,7 +34,7 @@ export default function Settings() {
   const [profileImage, setProfileImage] = useState(
     profile?.avatar_url || "https://example.com/default-avatar.jpg"
   );
-  const { isDarkMode, currentColors, setIsDarkMode } = useContext(ThemeContext);
+  const { isDarkMode, currentColors, toggleTheme } = useContext(ThemeContext);
 
   // Load social links on component mount
   useEffect(() => {
@@ -150,9 +150,9 @@ export default function Settings() {
     }
   };
 
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-  };
+  // const toggleTheme = () => {
+  //   setIsDarkMode(!isDarkMode);
+  // };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>

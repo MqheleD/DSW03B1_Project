@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { ThemeContext } from "../../hooks/ThemeContext";
+import { ThemeContext } from "@/hooks/ThemeContext";
 
 const App = () => {
   const [selectedDay, setSelectedDay] = useState("Today");

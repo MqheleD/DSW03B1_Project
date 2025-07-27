@@ -219,7 +219,7 @@ const handleSignup = async () => {
       country,
       city,
       interests: interests.length > 0 ? interests : null,
-      // role,
+      role: role,
     };
 
     const { error: profileError } = await supabase

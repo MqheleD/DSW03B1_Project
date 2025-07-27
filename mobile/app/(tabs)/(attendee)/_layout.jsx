@@ -2,7 +2,7 @@ import { Tabs } from "expo-router";
 import { Platform, StyleSheet, View } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { ThemeContext } from "../../hooks/ThemeContext";
+import { ThemeContext } from "@/hooks/ThemeContext";
 import React, { useContext } from "react";
 
 export default function TabsLayout() {

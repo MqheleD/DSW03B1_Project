@@ -23,13 +23,17 @@ export default function Login() {
   const [passwordVisible, setPasswordVisible] = useState(false);
   
 
-  const { session, signInUser } = UserAuth();
+  const { profile, session, signInUser } = UserAuth();
 
   useEffect(() => {
-    if (session) {
-      router.replace('/(tabs)/Speaker'); // 🚀 already logged in
+    if (session && profile?.role) {
+      if (profile.role === 'speaker') {
+        router.replace('/(tabs)/(speaker)/home');
+      } else {
+        router.replace('/(tabs)/(attendee)/home');
+      }
     }
-  }, [session]);
+  }, [session, profile]);
 
   const validateEmail = (text) => {
     setEmail(text);
