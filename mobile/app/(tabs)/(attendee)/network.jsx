@@ -323,7 +323,7 @@ const loadConnections = async () => {
                         </Text>
                         <View style={styles.details}>
                           <Text style={[styles.infor, { color: currentColors.secondaryButton }]}>
-                            {person.title || 'No Title'}
+                            {person.occupation || 'No Title'}
                           </Text>
                           {person.company && (
                             <>
