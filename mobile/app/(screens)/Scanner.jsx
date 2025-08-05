@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,12 +8,14 @@ import {
   Modal,
   Pressable,
   Alert,
+  Image,
 } from 'react-native';
 import { CameraView, Camera } from 'expo-camera';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserAuth } from '@/hooks/AuthContext';
+import ConfettiCannon from 'react-native-confetti-cannon';
 
 export default function Scanner() {
   const [hasPermission, setHasPermission] = useState(null);
@@ -21,6 +23,9 @@ export default function Scanner() {
   const [scannedData, setScannedData] = useState(null);
   const [torchOn, setTorchOn] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  
+  const confettiRef = useRef(null);
   const navigator = useNavigation();
   const { profile } = UserAuth();
 
@@ -38,6 +43,8 @@ export default function Scanner() {
       const parsed = JSON.parse(data);
 
       if (parsed?.type === 'profile') {
+        // Add timestamp to the connection
+        parsed.date = new Date().toISOString();
         setScannedData(parsed);
         console.log('Scanned Profile:', parsed);
       } else if (parsed?.type === 'room') {
@@ -58,31 +65,46 @@ export default function Scanner() {
     setModalVisible(false);
   };
 
-  const saveToNetwork = async (profile) => {
-    if (!profile) {
+  const saveToNetwork = async (profileData) => {
+    if (!profileData || !profile?.id) {
       Alert.alert('Error', 'Invalid profile data');
       return;
     }
-    try {
 
-      console.log("Saving to network for profile ID:", profile.id);
-      // const existing = await AsyncStorage.getItem('network');
-      const existing = await AsyncStorage.getItem(`network-${profile.id}`);
+    try {
+      console.log("Saving to network for user:", profile.id);
+      const storageKey = `network-${profile.id}`;
+      const existing = await AsyncStorage.getItem(storageKey);
       const currentNetwork = existing ? JSON.parse(existing) : [];
 
-      const alreadyExists = currentNetwork.find((p) => p.id === profile.id);
+      // Check if connection already exists
+      const alreadyExists = currentNetwork.some(
+        p => p.id === profileData.id || p.email === profileData.email
+      );
 
       if (!alreadyExists) {
-        const updated = [...currentNetwork, profile];
-        // await AsyncStorage.setItem('network', JSON.stringify(updated));
-        await AsyncStorage.setItem(`network-${profile.id}`, JSON.stringify(updated));
-        Alert.alert('Success', `Added ${profile.name} to your network.`);
+        const updated = [...currentNetwork, profileData];
+        await AsyncStorage.setItem(storageKey, JSON.stringify(updated));
+        
+        // Show success feedback
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 3000);
+        
+        Alert.alert(
+          'Success', 
+          `Added ${profileData.name} to your network.`,
+          [{ text: "OK", onPress: resetScanner }]
+        );
       } else {
-        Alert.alert('Info', `${profile.name} is already in your network.`);
+        Alert.alert(
+          'Info', 
+          `${profileData.name} is already in your network.`,
+          [{ text: "OK", onPress: resetScanner }]
+        );
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to save to network.');
       console.error('Failed to save to network:', error);
+      Alert.alert('Error', 'Failed to save connection. Please try again.');
     }
   };
 
@@ -106,6 +128,15 @@ export default function Scanner() {
 
   return (
     <View style={styles.container}>
+      {showConfetti && (
+        <ConfettiCannon
+          count={200}
+          origin={{ x: -10, y: 0 }}
+          fadeOut={true}
+          ref={confettiRef}
+        />
+      )}
+
       <CameraView
         style={styles.camera}
         facing={'back'}
@@ -155,56 +186,53 @@ export default function Scanner() {
               </>
             ) : scannedData?.type === 'profile' ? (
               <>
-    <View style={styles.profileModalContainer}>
-      {/* Profile Picture or Placeholder */}
-      {scannedData.avatarUrl ? (
-        <Image
-          source={{ uri: scannedData.avatarUrl }}
-          style={styles.profileAvatar}
-        />
-      ) : (
-        <View style={styles.profilePlaceholder}>
-          {scannedData.avatarUrl ? (
-            <Image
-              source={{ uri: scannedData.avatarUrl }}
-              style={styles.profileAvatar}
-            />
-          ) : 
-          (
-            <MaterialIcons name="person" size={60} color="#888" />
-          )}
-        </View>
-      )}
+                <View style={styles.profileModalContainer}>
+                  {scannedData.avatarUrl ? (
+                    <Image
+                      source={{ uri: scannedData.avatarUrl }}
+                      style={styles.profileAvatar}
+                    />
+                  ) : scannedData.avatar ? (
+                    <Image
+                      source={{ uri: scannedData.avatar }}
+                      style={styles.profileAvatar}
+                    />
+                  ) : (
+                    <View style={styles.profilePlaceholder}>
+                      <MaterialIcons name="person" size={60} color="#888" />
+                    </View>
+                  )}
 
-      <Text style={styles.profileName}>{scannedData.name}</Text>
-      <Text style={styles.profileRole}>{scannedData.role || 'Attendee'}</Text>
+                  <Text style={styles.profileName}>{scannedData.name}</Text>
+                  <Text style={styles.profileRole}>
+                    {scannedData.title || scannedData.role || 'Attendee'}
+                    {scannedData.company ? ` at ${scannedData.company}` : ''}
+                  </Text>
 
-      <View style={styles.profileInfoRow}>
-        <MaterialIcons name="email" size={20} color="#666" />
-        <Text style={styles.profileInfoText}>{scannedData.email || 'No Email'}</Text>
-      </View>
+                  <View style={styles.profileInfoRow}>
+                    <MaterialIcons name="email" size={20} color="#666" />
+                    <Text style={styles.profileInfoText}>
+                      {scannedData.email || scannedData.Email || 'No Email'}
+                    </Text>
+                  </View>
 
-      <View style={styles.profileInfoRow}>
-        <MaterialIcons name="business" size={20} color="#666" />
-        <Text style={styles.profileInfoText}>{scannedData.organization || 'No Organization'}</Text>
-      </View>
+                  {scannedData.company && (
+                    <View style={styles.profileInfoRow}>
+                      <MaterialIcons name="business" size={20} color="#666" />
+                      <Text style={styles.profileInfoText}>
+                        {scannedData.company}
+                      </Text>
+                    </View>
+                  )}
 
-      <View style={styles.profileInfoRow}>
-        <MaterialIcons name="work" size={20} color="#666" />
-        <Text style={styles.profileInfoText}>{scannedData.occupation || 'No Occupation'}</Text>
-      </View>
-
-      <Pressable
-        style={[styles.modalButton, styles.buttonOpen]}
-        onPress={() => {
-          saveToNetwork(scannedData);
-          resetScanner();
-        }}
-      >
-        <Text style={styles.textStyle}>Add to Network</Text>
-      </Pressable>
-    </View>
-  </>
+                  <Pressable
+                    style={[styles.modalButton, styles.buttonOpen]}
+                    onPress={() => saveToNetwork(scannedData)}
+                  >
+                    <Text style={styles.textStyle}>Add to Network</Text>
+                  </Pressable>
+                </View>
+              </>
             ) : scannedData?.type === 'room' ? (
               <>
                 <Text style={styles.modalTitle}>Room Access</Text>
@@ -237,7 +265,10 @@ export default function Scanner() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'black' },
+  container: { 
+    flex: 1, 
+    backgroundColor: 'black' 
+  },
   permissionContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -245,28 +276,43 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#f5f5f5',
   },
-  permissionText: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
-  permissionSubtext: { fontSize: 14, textAlign: 'center', color: '#666' },
-  camera: { flex: 1 },
-  overlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.4)' },
+  permissionText: { 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    marginBottom: 10 
+  },
+  permissionSubtext: { 
+    fontSize: 14, 
+    textAlign: 'center', 
+    color: '#666' 
+  },
+  camera: { 
+    flex: 1 
+  },
+  overlay: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0, 0, 0, 0.4)' 
+  },
   topOverlay: {
     flex: 1,
     flexDirection: 'row',
-    justifyContent: 'space-evenly',
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingTop: 40,
+    paddingHorizontal: 20,
   },
   title: {
     fontSize: 24,
     color: 'white',
     fontWeight: 'bold',
     textAlign: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
+    flex: 1,
   },
-  frameContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  frameContainer: { 
+    flex: 3, 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
   frame: {
     width: 250,
     height: 250,
@@ -313,65 +359,81 @@ const styles = StyleSheet.create({
     marginTop: 12,
     alignItems: 'center',
   },
-  buttonOpen: { backgroundColor: '#2196F3' },
-  buttonClose: { backgroundColor: '#f44336' },
-  textStyle: { color: 'white', fontWeight: 'bold', textAlign: 'center' },
-  modalTitle: { marginBottom: 10, textAlign: 'center', fontSize: 20, fontWeight: 'bold' },
-  modalText: { marginBottom: 20, textAlign: 'center', fontSize: 16 },
+  buttonOpen: { 
+    backgroundColor: '#2196F3' 
+  },
+  buttonClose: { 
+    backgroundColor: '#f44336' 
+  },
+  textStyle: { 
+    color: 'white', 
+    fontWeight: 'bold', 
+    textAlign: 'center' 
+  },
+  modalTitle: { 
+    marginBottom: 10, 
+    textAlign: 'center', 
+    fontSize: 20, 
+    fontWeight: 'bold' 
+  },
+  modalText: { 
+    marginBottom: 20, 
+    textAlign: 'center', 
+    fontSize: 16 
+  },
   profileModalContainer: {
-  alignItems: 'center',
-  backgroundColor: '#f0f4f8',
-  padding: 20,
-  borderRadius: 20,
-  width: '100%',
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.15,
-  shadowRadius: 6,
-  elevation: 5,
-},
-
-profileAvatar: {
-  width: 100,
-  height: 100,
-  borderRadius: 50,
-  marginBottom: 12,
-  backgroundColor: '#ddd',
-},
-
-profilePlaceholder: {
-  width: 100,
-  height: 100,
-  borderRadius: 50,
-  marginBottom: 12,
-  backgroundColor: '#ddd',
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-
-profileName: {
-  fontSize: 24,
-  fontWeight: '700',
-  color: '#222',
-},
-
-profileRole: {
-  fontSize: 16,
-  fontWeight: '500',
-  color: '#666',
-  marginBottom: 20,
-},
-
-profileInfoRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  marginBottom: 10,
-  width: '80%',
-},
-
-profileInfoText: {
-  marginLeft: 10,
-  fontSize: 14,
-  color: '#444',
-},
+    alignItems: 'center',
+    backgroundColor: '#f0f4f8',
+    padding: 20,
+    borderRadius: 20,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  profileAvatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginBottom: 12,
+    backgroundColor: '#ddd',
+  },
+  profilePlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginBottom: 12,
+    backgroundColor: '#ddd',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileName: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#222',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  profileRole: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#666',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  profileInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    width: '100%',
+    paddingHorizontal: 20,
+  },
+  profileInfoText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#444',
+    flexShrink: 1,
+  },
 });

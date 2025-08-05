@@ -36,11 +36,12 @@ export default function Settings() {
   );
   const { isDarkMode, currentColors, toggleTheme } = useContext(ThemeContext);
 
+  const key = `socialLinks_${profile?.id}`;
   // Load social links on component mount
   useEffect(() => {
     const loadSocialLinks = async () => {
       try {
-        const storedLinks = await AsyncStorage.getItem('socialLinks');
+        const storedLinks = await AsyncStorage.getItem(key);
         if (storedLinks) {
           setSocialLinks(JSON.parse(storedLinks));
         }
@@ -58,7 +59,7 @@ export default function Settings() {
       setSocialLinks(newLinks);
       setSocialLink('');
       try {
-        await AsyncStorage.setItem('socialLinks', JSON.stringify(newLinks));
+        await AsyncStorage.setItem(key, JSON.stringify(newLinks));
       } catch (error) {
         Alert.alert('Error', 'Failed to save social link');
       }
@@ -70,7 +71,7 @@ export default function Settings() {
     updatedLinks.splice(index, 1);
     setSocialLinks(updatedLinks);
     try {
-      await AsyncStorage.setItem('socialLinks', JSON.stringify(updatedLinks));
+      await AsyncStorage.setItem(key, JSON.stringify(updatedLinks));
     } catch (error) {
       Alert.alert('Error', 'Failed to remove social link');
     }

@@ -59,16 +59,41 @@ export default function Network() {
   //   }
   // };
 
+// const loadConnections = async () => {
+//   try {
+//         console.log(`'Network screen mounted, ${profile.id} connections'`);
+//     const profileId = profile?.id || profile?.email; // Use a unique field
+//     const savedConnections = await AsyncStorage.getItem(`network-${profile.id}`);
+//     if (savedConnections) {
+//       setConnections(JSON.parse(savedConnections));
+//     }
+//   } catch (error) {
+//     console.log('Failed to load connections:', error);
+//   }
+// };
+
 const loadConnections = async () => {
   try {
-        console.log('Network screen mounted, loading connections');
-    const profileId = profile?.id || profile?.email; // Use a unique field
-    const savedConnections = await AsyncStorage.getItem(`connections_${profileId}`);
+    if (!profile?.id) {
+      console.log('No profile ID available');
+      setConnections([]);
+      return;
+    }
+
+    console.log('Loading connections for profile ID:', profile.id);
+    const savedConnections = await AsyncStorage.getItem(`network-${profile.id}`);
+    
     if (savedConnections) {
-      setConnections(JSON.parse(savedConnections));
+      console.log('Found saved connections:', savedConnections);
+      const parsed = JSON.parse(savedConnections);
+      setConnections(Array.isArray(parsed) ? parsed : []);
+    } else {
+      console.log('No saved connections found');
+      setConnections([]);
     }
   } catch (error) {
-    console.log('Failed to load connections:', error);
+    console.error('Failed to load connections:', error);
+    Alert.alert('Error', 'Failed to load your network connections.');
   }
 };
 
@@ -274,9 +299,9 @@ const loadConnections = async () => {
                 >
                   <View style={{ flex: 1 }}>
                     <View style={styles.profileRow}>
-                      {person.avatar_url ? (
+                      {person.avatar ? (
                         <Image 
-                          source={{ uri: person.avatar_url }}
+                          source={{ uri: person.avatar }}
                           style={[
                             styles.circleIconContainer,
                             { backgroundColor: currentColors.profileIconBackground },
@@ -369,9 +394,9 @@ const loadConnections = async () => {
                 </View>
 
                 <View style={styles.modalProfile}>
-                  {selectedPerson.avatar_url ? (
+                  {selectedPerson.avatar ? (
                     <Image
-                      source={{ uri: selectedPerson.avatar_url }}
+                      source={{ uri: selectedPerson.avatar }}
                       style={[
                         styles.modalIconContainer,
                         { backgroundColor: currentColors.profileIconBackground },
@@ -391,12 +416,12 @@ const loadConnections = async () => {
                     {selectedPerson.name}
                   </Text>
                   <Text style={[styles.modalPosition, { color: currentColors.secondaryButton }]}>
-                    {selectedPerson.title || 'No Title '}{selectedPerson.company ?  `at ${selectedPerson.company}` : ''}
+                    {selectedPerson.occupation || 'No Title '}{selectedPerson.company ?  `at ${selectedPerson.company}` : ''}
                   </Text>
                 </View>
 
                 <View style={styles.modalInfoContainer}>
-                  {selectedPerson.Email && (
+                  {selectedPerson.email && (
                     <View style={styles.modalInfoRow}>
                       <Ionicons
                         name="mail-outline"
@@ -440,9 +465,9 @@ const loadConnections = async () => {
                     <Text style={styles.actionButtonText}>LinkedIn</Text>
                   </TouchableOpacity>
 
-                  {selectedPerson.Email && (
+                  {selectedPerson.email && (
                     <TouchableOpacity
-                      onPress={() => handleEmail(selectedPerson.Email)}
+                      onPress={() => handleEmail(selectedPerson.email)}
                       style={[
                         styles.actionButton,
                         { backgroundColor: currentColors.secondaryButton, flex: 1, marginLeft: 10 },

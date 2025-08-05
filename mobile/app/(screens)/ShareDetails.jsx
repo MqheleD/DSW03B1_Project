@@ -1,157 +1,123 @@
-import React, { useContext, useEffect, useState } from "react";
-import { 
-    View, 
-    Text, 
-    TouchableOpacity, 
-    StyleSheet, 
-    StatusBar 
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
-import QRCode from "react-native-qrcode-svg";
-import { supabase } from "../supabaseClient";
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Image, ActivityIndicator, ScrollView } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import QRCode from 'react-native-qrcode-svg';
+import { UserAuth } from '@/hooks/AuthContext';
 
-import { ThemeContext } from "../../hooks/ThemeContext";
+export default function MyQRCodeScreen() {
+  const { session, profile } = UserAuth();
+  const [socialLinks, setSocialLinks] = useState([]);
+  const [qrValue, setQrValue] = useState('');
+  const [loading, setLoading] = useState(true);
 
-import { router } from 'expo-router';
+  useEffect(() => {
+    const loadProfileData = async () => {
+      try {
+        const storedLinks = await AsyncStorage.getItem(`socialLinks_${profile?.id}`);
+        const parsedLinks = storedLinks ? JSON.parse(storedLinks) : [];
 
-export default function QRCodeScreen() {
-  const { currentColors, isDarkMode } = useContext(ThemeContext);
+        setSocialLinks(parsedLinks);
 
-  // data to be put in the QR code
-  // const qrCodeData = "https://example.com/myprofile";
-  // const qrCodeData = JSON.stringify(userInfo);
+        const qrPayload = {
+          type: 'profile',
+          id: session?.user?.id || '',
+          name: profile?.full_name || '',
+          role: profile?.role || '',
+          avatar: profile?.avatar_url || '',
+          socials: parsedLinks,
+          email: session?.user?.email || '',
+          organizatiun: profile?.organization || '',
+          occupation: profile?.occupation || '',
+        };
 
+        setQrValue(JSON.stringify(qrPayload));
+      } catch (error) {
+        console.error('Failed to load profile QR data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
+    loadProfileData();
+  }, [session, profile]);
 
-  const [userInfo, setUserInfo] = useState({
-    full_name: '',
-    occupation: '',
-    organisation: '',
-    email: '',
-  });
-
-   // get data from db
-      const fetchData = async () => {
-        console.log("fetchData called");
-        const {
-          data: { user },
-          error: authError,
-        } = await supabase.auth.getUser();
-  
-        if (authError || !user) {
-          console.error("Error fetching auth user:", authError?.message);
-          return;
-        }
-  
-        console.log("Auth user ID:", user.id);
-  
-        const { data, error } = await supabase
-          .from("attendees")
-          .select("full_name, email, occupation, organization")
-          .eq("id", user.id) // Use the logged-in user's ID
-          .single();
-  
-        if (error) {
-          console.error("Error reading DB:", error.message);
-          return;
-        }
-  
-        if (!data) {
-          console.warn("No attendee found with this user ID.");
-          return;
-        }
-        console.log("Data found:", data);
-        setUserInfo({
-          full_name: data.full_name,
-          email: data.email,
-          occupation: data.occupation,
-          organisation: data.organization,
-        });
-      };
-    
-      useEffect(() => {
-        fetchData();
-      }, [])
-
-      const qrCodeData = `https://connectme.app/user?name=${encodeURIComponent(userInfo.full_name)}&occupation=${encodeURIComponent(userInfo.occupation)}&org=${encodeURIComponent(userInfo.organisation)}&email=${encodeURIComponent(userInfo.email)}`;
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#3AD6BD" />
+      </View>
+    );
+  }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
-      <StatusBar style={isDarkMode ? "light" : "dark"} />
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.header}>Your AVIJOZI Profile QR</Text>
 
-      {/* Nav Bar */}
-      <View style={[styles.navBar, { backgroundColor: currentColors.navBarBackground }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <FontAwesome5 name="arrow-left" size={20} color={currentColors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={[styles.navTitle, { color: currentColors.textPrimary }]}>User Details</Text>
-        <View style={{ width: 32 }} />
+      <Image
+        source={{ uri: profile?.avatar_url }}
+        style={styles.avatar}
+        resizeMode="cover"
+      />
+      <Text style={styles.name}>{profile?.full_name}</Text>
+      <Text style={styles.role}>{profile?.role}</Text>
+
+      <View style={styles.qrContainer}>
+        {qrValue ? (
+          <QRCode value={qrValue} size={250} />
+        ) : (
+          <Text>QR Data is empty.</Text>
+        )}
       </View>
 
-      {/* QR Code Display */}
-      <View style={styles.qrCodeContainer}>
-        <QRCode
-          value={qrCodeData}
-          size={200}
-          color={currentColors.textPrimary}
-          backgroundColor={currentColors.background}
-          logoBackgroundColor="transparent"
-        />
-        <Text style={[styles.qrCodeLabel, { color: currentColors.textPrimary }]}>
-          Let's connect. Scan this QR code.
-        </Text>
-      </View>
-    </SafeAreaView>
+      <Text style={styles.note}>Let others scan this to connect with you.</Text>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    padding: 24,
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  centered: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  navBar: {
-    height: 56,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    justifyContent: "space-between",
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 4,
-    elevation: 3,
+  header: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 24,
+    color: '#111',
   },
-  backButton: {
-    width: 32,
-    justifyContent: "center",
-    alignItems: "center",
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginBottom: 12,
+    backgroundColor: '#ccc',
   },
-  navTitle: {
-    fontSize: 18,
-    fontWeight: "600",
+  name: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 4,
+    color: '#111',
   },
-  qrCodeContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 16,
-  },
-  qrCodeLabel: {
+  role: {
     fontSize: 16,
-    marginTop: 24,
-    textAlign: "center",
+    color: '#666',
+    marginBottom: 20,
   },
-  button: {
-    marginHorizontal: 16,
-    marginBottom: 32,
-    paddingVertical: 14,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
+  qrContainer: {
+    marginBottom: 20,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#f0f0f0',
   },
-  buttonText: {
-    fontWeight: "600",
-    fontSize: 16,
+  note: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 12,
   },
 });
