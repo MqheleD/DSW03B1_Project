@@ -1,219 +1,461 @@
-import {useState, useContext} from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  Image,
   ScrollView,
   TouchableOpacity,
   Linking,
   Alert,
   Modal,
+  Animated,
+  Easing,
+  RefreshControl,
+  Image,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-
 import { ThemeContext } from '@/hooks/ThemeContext';
+import { UserAuth } from '@/hooks/AuthContext';
 
 export default function Network() {
-  const Width = 30;
-
-  const people = [
-    {
-      id: 1,
-      name: 'Tiana Mc',
-      title: 'Designer',
-      company: 'PixelLab',
-      imageUri: null,
-      linkedin: 'https://www.linkedin.com/in/kimberly-zinzile-khumalo-bb16552a9',
-      Email: 'kimzinzile@gmail.com',
-    },
-    {
-      id: 2,
-      name: 'Lebo M',
-      title: 'Developer',
-      company: 'CodeSpace',
-      imageUri: null,
-      linkedin: null,
-      Email: null,
-    },
-    {
-      id: 3,
-      name: 'Kim Z',
-      title: 'game dev',
-      company: 'Inkwell',
-      imageUri: null,
-      linkedin: '',
-      Email: null,
-    },
-    {
-      id: 4,
-      name: 'Zola T',
-      title: 'Analyst',
-      company: 'DataX',
-      imageUri: null,
-      linkedin: '',
-      Email: null,
-    },
-    {
-      id: 5,
-      name: 'Zola T',
-      title: 'Analyst',
-      company: 'DataX',
-      imageUri: null,
-      linkedin: '',
-      Email: null,
-    },
-    {
-      id: 6,
-      name: 'Zola T',
-      title: 'Analyst',
-      company: 'DataX',
-      imageUri: null,
-      linkedin: '',
-      Email: null,
-    },
-    {
-      id: 7,
-      name: 'stdytdftuf',
-      title: 'Analyst',
-      company: 'fjghjgk',
-      imageUri: null,
-      linkedin: '',
-      Email: null,
-    },
-    {
-      id: 8,
-      name: 'vjvjjh',
-      title: 'Analyst',
-      company: 'vhjvbjhb',
-      imageUri: null,
-      linkedin: '',
-      Email: null,
-    },
-  ];
-
-  const [Visible, setVisible] = useState(false);
+  const Width = 40;
+  const scaleValue = useRef(new Animated.Value(1)).current;
+  const rotateValue = useRef(new Animated.Value(0)).current;
+  
+  const [visible, setVisible] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState(null);
-
+  const [connections, setConnections] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
   const { currentColors } = useContext(ThemeContext);
+  
+  const { profile } = UserAuth();
 
-const handleEmail = ({ email }) => {
-  const subject = 'Great connecting at Avijozi';
-  const body = 'Hi there,\n\nI’m contacting you regarding our connection at Avijozi. Let’s keep in touch.';
-  const mailUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  Linking.openURL(mailUrl);
+  // Load connections on mount and when profile changes
+  useEffect(() => {
+    loadConnections();
+  }, [profile]);
+
+  // const loadConnections = async () => {
+  //   try {
+  //     if (!profile?.id) {
+  //       setConnections([]);
+  //       return;
+  //     }
+
+  //     const key = connections_${profile.id};
+  //     const storedConnections = await AsyncStorage.getItem(key);
+  //     if (storedConnections) {
+  //       const parsedConnections = JSON.parse(storedConnections);
+  //       setConnections(Array.isArray(parsedConnections) ? parsedConnections : []);
+  //       console.log('Loaded connections:', parsedConnections);
+  //     } else {
+  //       setConnections([]);
+  //     }
+  //   } catch (error) {
+  //     console.error('Failed to load connections:', error);
+  //     Alert.alert('Error', 'Failed to load your network connections.');
+  //   }
+  // };
+
+const loadConnections = async () => {
+  try {
+        console.log('Network screen mounted, loading connections');
+    const profileId = profile?.id || profile?.email; // Use a unique field
+    const savedConnections = await AsyncStorage.getItem(`connections_${profileId}`);
+    if (savedConnections) {
+      setConnections(JSON.parse(savedConnections));
+    }
+  } catch (error) {
+    console.log('Failed to load connections:', error);
+  }
 };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadConnections();
+    setRefreshing(false);
+  };
+
+  const saveConnections = async (newConnections) => {
+    try {
+      if (!profile?.id) return;
+
+      const key = `connections_${profile.id}`;
+      await AsyncStorage.setItem(key, JSON.stringify(newConnections));
+      console.log('Saved connections:', newConnections);
+    } catch (error) {
+      console.error('Failed to save connections:', error);
+    }
+  };
+
+  const handlePressIn = () => {
+    Animated.spring(scaleValue, {
+      toValue: 0.95,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleValue, {
+      toValue: 1,
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const rotateInterpolation = rotateValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  const animateButton = () => {
+    rotateValue.setValue(0);
+    Animated.timing(rotateValue, {
+      toValue: 1,
+      duration: 1000,
+      easing: Easing.linear,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleEmail = (email) => {
+    const subject = 'Great connecting at Avijozi';
+    const body = "Hi there,\n\nI enjoyed connecting with you at Avijozi. Let's keep in touch!";
+    const mailUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    Linking.openURL(mailUrl).catch(err => {
+      Alert.alert('Error', 'Could not open email client');
+      console.error('Failed to open email:', err);
+    });
+  };
+
+  const handleRemoveConnection = (person) => {
+    Alert.alert(
+      "Remove Connection",
+      `Are you sure you want to remove ${person.name} from your connections?`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: () => {
+            const filtered = connections.filter(p => p.id !== person.id);
+            setConnections(filtered);
+            saveConnections(filtered);
+          }
+        }
+      ]
+    );
+  };
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={[styles.screen, { backgroundColor: currentColors.background }]}>
-      <TouchableOpacity style={[styles.tapButton, { backgroundColor: currentColors.cardBackground }]} onPress={() => setVisible(true)}>
-        <Text style={[styles.tapText, {color: currentColors.textPrimary}]}>Tap to share</Text>
-        <View style={[styles.circle, { width: Width, height: Width, borderRadius: Width / 2, backgroundColor: currentColors.primaryButton }]}>
-          <Ionicons name="person-outline" size={20} color="black" />
-        </View>
-      </TouchableOpacity>
+    <SafeAreaView
+      edges={['top', 'bottom']}
+      style={[styles.screen, { backgroundColor: currentColors.background }]}
+    >
+      <Animated.View
+        style={[
+          styles.tapButton,
+          {
+            backgroundColor: currentColors.cardBackground,
+            transform: [{ scale: scaleValue }],
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.shareButtonContent}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          onPress={() => {
+            setVisible(true);
+            animateButton();
+          }}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.tapText, { color: currentColors.textPrimary }]}>
+            Tap to share your profile
+          </Text>
+          <Animated.View
+            style={[
+              styles.circle,
+              {
+                width: Width,
+                height: Width,
+                borderRadius: Width / 2,
+                backgroundColor: currentColors.primaryButton,
+                transform: [{ rotate: rotateInterpolation }],
+              },
+            ]}
+          >
+            <Ionicons name="person-add-outline" size={20} color="white" />
+          </Animated.View>
+        </TouchableOpacity>
+      </Animated.View>
 
       <View style={{ flex: 1 }}>
         <ScrollView
           style={styles.scrollArea}
-          contentContainerStyle={{ paddingBottom: 200 }}
+          contentContainerStyle={{ paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={handleRefresh}
+              colors={[currentColors.primaryButton]}
+              tintColor={currentColors.primaryButton}
+            />
+          }
         >
-          {people.length === 0 ? (
+          {connections.length === 0 ? (
             <View style={styles.noConnectionsContainer}>
-              <View style={styles.centerConnection}>
-                <View style={styles.noConnectionIconCircle}>
-                  <Ionicons name="person-outline" size={40} color="#333" />
+              <Animated.View
+                style={[
+                  styles.centerConnection,
+                  {
+                    opacity: rotateValue.interpolate({
+                      inputRange: [0, 0.5, 1],
+                      outputRange: [1, 0.5, 1],
+                    }),
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.noConnectionIconCircle,
+                    { backgroundColor: currentColors.cardBackground },
+                  ]}
+                >
+                  <Ionicons name="people-outline" size={40} color={currentColors.textPrimary} />
                 </View>
-                <Text style={styles.noConnectionsText}>No Connections</Text>
-                <Text>Don't be shy</Text>
-              </View>
+                <Text style={[styles.noConnectionsTitle, { color: currentColors.textPrimary }]}>
+                  No Connections Yet
+                </Text>
+                <Text style={[styles.noConnectionsSubtitle, { color: currentColors.textSecondary }]}>
+                  Start building your network by connecting with others
+                </Text>
+                <TouchableOpacity
+                  style={[styles.inviteButton, { backgroundColor: currentColors.primaryButton }]}
+                >
+                  <Text style={styles.inviteButtonText}>Invite Friends</Text>
+                </TouchableOpacity>
+              </Animated.View>
             </View>
           ) : (
-            people.map((person) => (
-              <TouchableOpacity
-                key={person.id}
-                style={[styles.Container, { backgroundColor: currentColors.cardBackground }]}
-                onPress={() => {
-                  setSelectedPerson(person);
-                  setVisible(true);
+            connections.map((person) => (
+              <Animated.View
+                key={person.id || person.Email}
+                style={{
+                  transform: [{ scale: scaleValue }],
                 }}
               >
-                <View style={styles.profileRow}>
-                  {person.imageUri ? (
-                    <Image source={{ uri: person.imageUri }} style={styles.profileImage} />
-                  ) : (
-                    <View style={styles.circleIconContainer}>
-                      <Ionicons name="person-outline" size={30} color="#333" />
-                    </View>
-                  )}
-                  <View style={styles.profileDetails}>
-                    <Text style={[styles.name, {color: currentColors.textPrimary}]}>{person.name}</Text>
-                    <View style={styles.details}>
-                      <Text style={[styles.infor, {color: currentColors.secondaryButton}]}>{person.title}</Text>
-                      <Text style={styles.infor}>|</Text>
-                      <Text style={[styles.infor, {color: currentColors.secondaryButton}]}>{person.company}</Text>
+                <TouchableOpacity
+                  style={[
+                    styles.Container,
+                    {
+                      backgroundColor: currentColors.cardBackground,
+                      borderColor: currentColors.border,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    },
+                  ]}
+                  onPress={() => {
+                    setSelectedPerson(person);
+                    setVisible(true);
+                  }}
+                  onPressIn={handlePressIn}
+                  onPressOut={handlePressOut}
+                  activeOpacity={0.8}
+                >
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.profileRow}>
+                      {person.avatar_url ? (
+                        <Image 
+                          source={{ uri: person.avatar_url }}
+                          style={[
+                            styles.circleIconContainer,
+                            { backgroundColor: currentColors.profileIconBackground },
+                          ]}
+                        />
+                      ) : (
+                        <View
+                          style={[
+                            styles.circleIconContainer,
+                            { backgroundColor: currentColors.profileIconBackground },
+                          ]}
+                        >
+                          <Ionicons name="person-outline" size={30} color={currentColors.profileIcon} />
+                        </View>
+                      )}
+                      <View style={styles.profileDetails}>
+                        <Text style={[styles.name, { color: currentColors.textPrimary }]}>
+                          {person.name || 'No Name'}
+                        </Text>
+                        <View style={styles.details}>
+                          <Text style={[styles.infor, { color: currentColors.secondaryButton }]}>
+                            {person.title || 'No Title'}
+                          </Text>
+                          {person.company && (
+                            <>
+                              <Text style={[styles.separator, { color: currentColors.textSecondary }]}>•</Text>
+                              <Text style={[styles.infor, { color: currentColors.secondaryButton }]}>
+                                {person.company}
+                              </Text>
+                            </>
+                          )}
+                        </View>
+                        {person.date && (
+                          <View style={styles.connectionDate}>
+                            <Text style={[styles.dateText, { color: currentColors.textSecondary }]}>
+                              Connected on {new Date(person.date).toLocaleDateString()}  
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
                   </View>
-                </View>
-              </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => handleRemoveConnection(person)}
+                    style={{ padding: 8 }}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Ionicons name="trash-outline" size={24} color={currentColors.textSecondary} />
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              </Animated.View>
             ))
           )}
         </ScrollView>
       </View>
 
       <Modal
-        visible={Visible}
+        visible={visible}
         transparent
-        animationType="slide"
+        animationType="fade"
         onRequestClose={() => setVisible(false)}
       >
         <View style={styles.modalBackground}>
-          <View style={styles.modalContainer}>
+          <Animated.View
+            style={[
+              styles.modalContainer,
+              {
+                backgroundColor: currentColors.cardBackground,
+                transform: [
+                  {
+                    translateY: rotateValue.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [100, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
             {selectedPerson && (
               <>
-                <Text style={styles.modalTitle}>Profile Info</Text>
-                <Text style={styles.modularText}>Name: {selectedPerson.name}</Text>
-                <Text style={styles.modularText}>Title: {selectedPerson.title}</Text>
-                <Text style={styles.modularText}>Company: {selectedPerson.company}</Text>
+                <View style={styles.modalHeader}>
+                  <Text style={[styles.modalTitle, { color: currentColors.textPrimary }]}>
+                    Connection Details
+                  </Text>
+                  <TouchableOpacity onPress={() => setVisible(false)} style={styles.closeButton}>
+                    <Ionicons name="close-outline" size={24} color={currentColors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.modalProfile}>
+                  {selectedPerson.avatar_url ? (
+                    <Image
+                      source={{ uri: selectedPerson.avatar_url }}
+                      style={[
+                        styles.modalIconContainer,
+                        { backgroundColor: currentColors.profileIconBackground },
+                      ]}
+                    />
+                  ) : (
+                    <View
+                      style={[
+                        styles.modalIconContainer,
+                        { backgroundColor: currentColors.profileIconBackground },
+                      ]}
+                    >
+                      <Ionicons name="person-outline" size={40} color={currentColors.profileIcon} />
+                    </View>
+                  )}
+                  <Text style={[styles.modalName, { color: currentColors.textPrimary }]}>
+                    {selectedPerson.name}
+                  </Text>
+                  <Text style={[styles.modalPosition, { color: currentColors.secondaryButton }]}>
+                    {selectedPerson.title || 'No Title '}{selectedPerson.company ?  `at ${selectedPerson.company}` : ''}
+                  </Text>
+                </View>
+
+                <View style={styles.modalInfoContainer}>
+                  {selectedPerson.Email && (
+                    <View style={styles.modalInfoRow}>
+                      <Ionicons
+                        name="mail-outline"
+                        size={20}
+                        color={currentColors.textSecondary}
+                        style={styles.infoIcon}
+                      />
+                      <Text style={[styles.modalInfoText, { color: currentColors.textPrimary }]}>
+                        {selectedPerson.Email}
+                      </Text>
+                    </View>
+                  )}
+
+                  {selectedPerson.company && (
+                    <View style={styles.modalInfoRow}>
+                      <Ionicons
+                        name="briefcase-outline"
+                        size={20}
+                        color={currentColors.textSecondary}
+                        style={styles.infoIcon}
+                      />
+                      <Text style={[styles.modalInfoText, { color: currentColors.textPrimary }]}>
+                        {selectedPerson.company}
+                      </Text>
+                    </View>
+                  )}
+                </View>
 
                 <View style={styles.modalButtons}>
-                  <TouchableOpacity onPress={() => setVisible(false)} style={styles.buttonClose}>
-                    <Text style={styles.buttonText}>Close</Text>
-                  </TouchableOpacity>
-
                   <TouchableOpacity
                     onPress={() => {
                       if (selectedPerson.linkedin) {
                         Linking.openURL(selectedPerson.linkedin);
                       } else {
-                        Alert.alert('No LinkedIn profile available');
+                        Alert.alert('LinkedIn profile not available');
                       }
                     }}
-                    style={styles.buttonLinkedIn}
+                    style={[styles.actionButton, { backgroundColor: currentColors.primaryButton, flex: 1 }]}
                   >
-                    <Text style={styles.buttonText}>View LinkedIn</Text>
+                    <Ionicons name="logo-linkedin" size={20} color="white" />
+                    <Text style={styles.actionButtonText}>LinkedIn</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity
-                    onPress={() => {
-                      if (selectedPerson.Email) {
-                        let email = selectedPerson.Email;
-                        handleEmail({ email });
-                      } else {
-                        Alert.alert('Email unavailable');
-                      }
-                    }}
-                    style={styles.buttonLinkedIn}
-                  >
-                    <Text style={styles.buttonText}>Email</Text>
-                  </TouchableOpacity>
+                  {selectedPerson.Email && (
+                    <TouchableOpacity
+                      onPress={() => handleEmail(selectedPerson.Email)}
+                      style={[
+                        styles.actionButton,
+                        { backgroundColor: currentColors.secondaryButton, flex: 1, marginLeft: 10 },
+                      ]}
+                    >
+                      <Ionicons name="mail-outline" size={20} color="white" />
+                      <Text style={styles.actionButtonText}>Email</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </>
             )}
-          </View>
+          </Animated.View>
         </View>
       </Modal>
     </SafeAreaView>
@@ -223,39 +465,53 @@ const handleEmail = ({ email }) => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: 'white',
   },
   tapButton: {
-    backgroundColor: '#000000',
+    marginHorizontal: 20,
+    marginTop: 15,
+    marginBottom: 10,
+    borderRadius: 12,
+    paddingVertical: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  shareButtonContent: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingBottom: 15,
-    paddingTop: 15,
-    elevation: 5,
   },
   tapText: {
-    color: 'white',
-    marginBottom: 10,
+    marginRight: 10,
     fontSize: 16,
+    fontWeight: '500',
   },
   circle: {
-    backgroundColor: '#FF7A7A',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
   scrollArea: {
     flex: 1,
+    paddingHorizontal: 15,
   },
   Container: {
-    marginVertical: 10,
-    marginHorizontal: 10,
-    padding: 10,
-    backgroundColor: '#f2f4ff',
-    minHeight: 100,
-    borderColor: '#e3f0f4',
+    marginVertical: 8,
+    padding: 16,
+    minHeight: 80,
+    borderWidth: 1,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
     elevation: 2,
-    borderWidth: 2,
-    borderRadius: 10,
   },
   profileRow: {
     flexDirection: 'row',
@@ -264,35 +520,37 @@ const styles = StyleSheet.create({
   circleIconContainer: {
     width: 60,
     height: 60,
-    borderRadius: 60,
-    backgroundColor: '#CEDFE8',
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ccddcb',
-  },
-  profileImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'grey',
+    overflow: 'hidden',
   },
   profileDetails: {
-    marginLeft: 10,
+    marginLeft: 16,
+    flex: 1,
   },
   name: {
-    color: 'black',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    marginBottom: 2,
   },
   details: {
     flexDirection: 'row',
-    marginTop: 4,
+    alignItems: 'center',
+    marginBottom: 4,
   },
   infor: {
-    marginRight: 4,
-    color: '#FF7A7A',
+    fontSize: 14,
+  },
+  separator: {
+    marginHorizontal: 6,
+    fontSize: 14,
+  },
+  connectionDate: {
+    marginTop: 4,
+  },
+  dateText: {
+    fontSize: 12,
   },
   modalBackground: {
     flex: 1,
@@ -301,56 +559,125 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalContainer: {
-    backgroundColor: 'black',
     padding: 20,
-    borderRadius: 10,
-    width: '80%',
+    borderRadius: 16,
+    width: '90%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 20,
   },
   modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalProfile: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalName: {
     fontSize: 18,
     fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  modalPosition: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  modalInfoContainer: {
+    marginBottom: 20,
+    width: '100%',
+  },
+  modalInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 10,
-    color: '#FF7A7A',
+    paddingHorizontal: 10,
+  },
+  infoIcon: {
+    marginRight: 10,
+  },
+  modalInfoText: {
+    fontSize: 15,
+    flexShrink: 1,
   },
   modalButtons: {
     flexDirection: 'row',
     marginTop: 20,
-    gap: 10,
   },
-  buttonClose: {
-    backgroundColor: '#ccc',
-    padding: 10,
-    borderRadius: 5,
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    paddingHorizontal: 16,
   },
-  buttonLinkedIn: {
-    backgroundColor: 'white',
-    padding: 10,
-    borderRadius: 5,
-  },
-  buttonText: {
-    color: 'black',
-  },
-  modularText: {
+  actionButtonText: {
     color: 'white',
+    marginLeft: 8,
+    fontWeight: '500',
+    fontSize: 15,
   },
   noConnectionsContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 50,
+    paddingHorizontal: 40,
+    marginTop: 60,
   },
-  noConnectionIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#ccc',
-    justifyContent: 'center',
+  centerConnection: {
     alignItems: 'center',
   },
-  noConnectionsText: {
-    marginTop: 10,
+  noConnectionIconCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  noConnectionsTitle: {
+    fontSize: 22,
+    fontWeight: '600',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  noConnectionsSubtitle: {
     fontSize: 16,
-    color: '#888',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 24,
+  },
+  inviteButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  inviteButtonText: {
+    color: 'white',
+    fontWeight: '500',
+    fontSize: 16,
   },
 });
+
+
