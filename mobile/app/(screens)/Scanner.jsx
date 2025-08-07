@@ -9,6 +9,7 @@ import {
   Pressable,
   Alert,
   Image,
+  Dimensions,
 } from 'react-native';
 import { CameraView, Camera } from 'expo-camera';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -16,6 +17,8 @@ import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserAuth } from '@/hooks/AuthContext';
 import ConfettiCannon from 'react-native-confetti-cannon';
+
+const { width, height } = Dimensions.get('window');
 
 export default function Scanner() {
   const [hasPermission, setHasPermission] = useState(null);
@@ -77,7 +80,6 @@ export default function Scanner() {
       const existing = await AsyncStorage.getItem(storageKey);
       const currentNetwork = existing ? JSON.parse(existing) : [];
 
-      // Check if connection already exists
       const alreadyExists = currentNetwork.some(
         p => p.id === profileData.id || p.email === profileData.email
       );
@@ -86,15 +88,20 @@ export default function Scanner() {
         const updated = [...currentNetwork, profileData];
         await AsyncStorage.setItem(storageKey, JSON.stringify(updated));
         
-        // Show success feedback
+        // Show confetti celebration
         setShowConfetti(true);
-        setTimeout(() => setShowConfetti(false), 3000);
+        confettiRef.current?.start();
         
-        Alert.alert(
-          'Success', 
-          `Added ${profileData.name} to your network.`,
-          [{ text: "OK", onPress: resetScanner }]
-        );
+setShowConfetti(true);
+
+setTimeout(() => {
+  setShowConfetti(false);
+  Alert.alert(
+    'Success',
+    `Added ${profileData.name} to your network.`,
+    [{ text: "OK", onPress: resetScanner }]
+  );
+}, 1500);
       } else {
         Alert.alert(
           'Info', 
@@ -128,14 +135,7 @@ export default function Scanner() {
 
   return (
     <View style={styles.container}>
-      {showConfetti && (
-        <ConfettiCannon
-          count={200}
-          origin={{ x: -10, y: 0 }}
-          fadeOut={true}
-          ref={confettiRef}
-        />
-      )}
+      
 
       <CameraView
         style={styles.camera}
@@ -153,7 +153,12 @@ export default function Scanner() {
           </View>
 
           <View style={styles.frameContainer}>
-            <View style={styles.frame} />
+            <View style={styles.frame}>
+              <View style={styles.cornerTopLeft} />
+              <View style={styles.cornerTopRight} />
+              <View style={styles.cornerBottomLeft} />
+              <View style={styles.cornerBottomRight} />
+            </View>
           </View>
 
           <View style={styles.bottomOverlay}>
@@ -231,6 +236,20 @@ export default function Scanner() {
                   >
                     <Text style={styles.textStyle}>Add to Network</Text>
                   </Pressable>
+                  {/* Confetti Celebration */}
+{showConfetti && (
+  <View style={styles.confettiContainer}>
+    <ConfettiCannon
+      count={300}
+      origin={{ x: width / 2, y: -20 }}
+      explosionSpeed={500}
+      fallSpeed={3000}
+      fadeOut={true}
+      colors={['#FF5252', '#FFD740', '#64FFDA', '#448AFF', '#B388FF']}
+      size={2}
+    />
+  </View>
+)}
                 </View>
               </>
             ) : scannedData?.type === 'room' ? (
@@ -267,7 +286,17 @@ export default function Scanner() {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: 'black' 
+    backgroundColor: 'black',
+    position: 'relative',
+  },
+  confettiContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1000,
+    pointerEvents: 'none',
   },
   permissionContainer: {
     flex: 1,
@@ -320,6 +349,47 @@ const styles = StyleSheet.create({
     borderColor: 'white',
     backgroundColor: 'transparent',
     borderRadius: 10,
+    position: 'relative',
+  },
+  cornerTopLeft: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 50,
+    height: 50,
+    borderLeftWidth: 4,
+    borderTopWidth: 4,
+    borderColor: '#FFD700',
+  },
+  cornerTopRight: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 50,
+    height: 50,
+    borderRightWidth: 4,
+    borderTopWidth: 4,
+    borderColor: '#FFD700',
+  },
+  cornerBottomLeft: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    width: 50,
+    height: 50,
+    borderLeftWidth: 4,
+    borderBottomWidth: 4,
+    borderColor: '#FFD700',
+  },
+  cornerBottomRight: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 50,
+    height: 50,
+    borderRightWidth: 4,
+    borderBottomWidth: 4,
+    borderColor: '#FFD700',
   },
   bottomOverlay: {
     flex: 1,

@@ -23,13 +23,13 @@ export default function Network() {
   const Width = 40;
   const scaleValue = useRef(new Animated.Value(1)).current;
   const rotateValue = useRef(new Animated.Value(0)).current;
-  
+
   const [visible, setVisible] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [connections, setConnections] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const { currentColors } = useContext(ThemeContext);
-  
+
   const { profile } = UserAuth();
 
   // Load connections on mount and when profile changes
@@ -59,43 +59,43 @@ export default function Network() {
   //   }
   // };
 
-// const loadConnections = async () => {
-//   try {
-//         console.log(`'Network screen mounted, ${profile.id} connections'`);
-//     const profileId = profile?.id || profile?.email; // Use a unique field
-//     const savedConnections = await AsyncStorage.getItem(`network-${profile.id}`);
-//     if (savedConnections) {
-//       setConnections(JSON.parse(savedConnections));
-//     }
-//   } catch (error) {
-//     console.log('Failed to load connections:', error);
-//   }
-// };
+  // const loadConnections = async () => {
+  //   try {
+  //         console.log(`'Network screen mounted, ${profile.id} connections'`);
+  //     const profileId = profile?.id || profile?.email; // Use a unique field
+  //     const savedConnections = await AsyncStorage.getItem(`network-${profile.id}`);
+  //     if (savedConnections) {
+  //       setConnections(JSON.parse(savedConnections));
+  //     }
+  //   } catch (error) {
+  //     console.log('Failed to load connections:', error);
+  //   }
+  // };
 
-const loadConnections = async () => {
-  try {
-    if (!profile?.id) {
-      console.log('No profile ID available');
-      setConnections([]);
-      return;
-    }
+  const loadConnections = async () => {
+    try {
+      if (!profile?.id) {
+        console.log('No profile ID available');
+        setConnections([]);
+        return;
+      }
 
-    console.log('Loading connections for profile ID:', profile.id);
-    const savedConnections = await AsyncStorage.getItem(`network-${profile.id}`);
-    
-    if (savedConnections) {
-      console.log('Found saved connections:', savedConnections);
-      const parsed = JSON.parse(savedConnections);
-      setConnections(Array.isArray(parsed) ? parsed : []);
-    } else {
-      console.log('No saved connections found');
-      setConnections([]);
+      console.log('Loading connections for profile ID:', profile.id);
+      const savedConnections = await AsyncStorage.getItem(`network-${profile.id}`);
+
+      if (savedConnections) {
+        console.log('Found saved connections:', savedConnections);
+        const parsed = JSON.parse(savedConnections);
+        setConnections(Array.isArray(parsed) ? parsed : []);
+      } else {
+        console.log('No saved connections found');
+        setConnections([]);
+      }
+    } catch (error) {
+      console.error('Failed to load connections:', error);
+      Alert.alert('Error', 'Failed to load your network connections.');
     }
-  } catch (error) {
-    console.error('Failed to load connections:', error);
-    Alert.alert('Error', 'Failed to load your network connections.');
-  }
-};
+  };
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -156,7 +156,7 @@ const loadConnections = async () => {
     });
   };
 
-  const handleRemoveConnection = (person) => {
+  const handleRemoveConnection = async (person) => {
     Alert.alert(
       "Remove Connection",
       `Are you sure you want to remove ${person.name} from your connections?`,
@@ -168,10 +168,23 @@ const loadConnections = async () => {
         {
           text: "Remove",
           style: "destructive",
-          onPress: () => {
-            const filtered = connections.filter(p => p.id !== person.id);
-            setConnections(filtered);
-            saveConnections(filtered);
+          onPress: async () => {
+            try {
+              // Filter out the person to be removed
+              const filtered = connections.filter(p => p.id !== person.id);
+
+              // Update local state
+              setConnections(filtered);
+
+              // Update AsyncStorage
+              const storageKey = `network-${profile.id}`;
+              await AsyncStorage.setItem(storageKey, JSON.stringify(filtered));
+
+              console.log('Successfully removed connection:', person.name);
+            } catch (error) {
+              console.error('Failed to remove connection:', error);
+              Alert.alert('Error', 'Failed to remove connection. Please try again.');
+            }
           }
         }
       ]
@@ -228,8 +241,8 @@ const loadConnections = async () => {
           contentContainerStyle={{ paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl 
-              refreshing={refreshing} 
+            <RefreshControl
+              refreshing={refreshing}
               onRefresh={handleRefresh}
               colors={[currentColors.primaryButton]}
               tintColor={currentColors.primaryButton}
@@ -300,7 +313,7 @@ const loadConnections = async () => {
                   <View style={{ flex: 1 }}>
                     <View style={styles.profileRow}>
                       {person.avatar ? (
-                        <Image 
+                        <Image
                           source={{ uri: person.avatar }}
                           style={[
                             styles.circleIconContainer,
@@ -337,7 +350,7 @@ const loadConnections = async () => {
                         {person.date && (
                           <View style={styles.connectionDate}>
                             <Text style={[styles.dateText, { color: currentColors.textSecondary }]}>
-                              Connected on {new Date(person.date).toLocaleDateString()}  
+                              Connected on {new Date(person.date).toLocaleDateString()}
                             </Text>
                           </View>
                         )}
@@ -416,7 +429,7 @@ const loadConnections = async () => {
                     {selectedPerson.name}
                   </Text>
                   <Text style={[styles.modalPosition, { color: currentColors.secondaryButton }]}>
-                    {selectedPerson.occupation || 'No Title '}{selectedPerson.company ?  `at ${selectedPerson.company}` : ''}
+                    {selectedPerson.occupation || 'No Title '}{selectedPerson.company ? `at ${selectedPerson.company}` : ''}
                   </Text>
                 </View>
 

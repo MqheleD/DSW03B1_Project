@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from "react";
 import {
   View,
@@ -14,61 +13,14 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-
+import StorySwiper from "@/components/StorySwiper";
 import { ThemeContext } from "@/hooks/ThemeContext";
 import { UserAuth } from "@/hooks/AuthContext";
 import { router } from "expo-router";
+import supabase from "@/app/supabaseClient";
 
-const eventsData = {
-  Today: [
-    {
-      id: 1,
-      title: "Animation",
-      time: "10:00 AM - 11:30 AM",
-      location: "Conference Room A",
-      color: "#3b82f6",
-    },
-    {
-      id: 2,
-      title: "Film",
-      time: "2:00 PM - 3:30 PM",
-      location: "Virtual Meeting",
-      color: "#8b5cf6",
-    },
-    {
-      id: 3,
-      title: "VFX",
-      time: "4:00 PM - 4:30 PM",
-      location: "Phone",
-      color: "#22c55e",
-    },
-  ],
-  Tomorrow: [
-    {
-      id: 4,
-      title: "Virtual Production",
-      time: "9:00 AM - 12:00 PM",
-      location: "Innovation Lab",
-      color: "#ec4899",
-    },
-    {
-      id: 5,
-      title: "AI",
-      time: "12:30 PM - 1:30 PM",
-      location: "Bistro Garden",
-      color: "#eab308",
-    },
-    {
-      id: 6,
-      title: "Interactive Technology",
-      time: "12:30 PM - 1:30 PM",
-      location: "Bistro Garden",
-      color: "#eab308",
-    },
-  ],
-};
-
-export default function App() {
+export default function Home() {
+  const [eventsData, setEventsData] = useState({ Today: [], Tomorrow: [] });
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedTab, setSelectedTab] = useState("Today");
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -77,8 +29,120 @@ export default function App() {
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    fetchEvents();
     return () => clearInterval(timer);
   }, []);
+
+const fetchEvents = async () => {
+  try {
+    // 1. Get device's LOCAL date (August 7, 2025)
+    const localDate = new Date();
+    console.log("Device Local Date:", localDate.toString());
+
+    // 2. Convert to YYYY-MM-DD string in LOCAL time (ignore timezone)
+    const getLocalDateString = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`; // "2025-08-07"
+    };
+
+    const todayStr = getLocalDateString(localDate);
+    const tomorrow = new Date(localDate);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = getLocalDateString(tomorrow);
+
+    console.log("Querying events for:", { todayStr, tomorrowStr });
+
+    // 3. Fetch today's events (timezone-agnostic date comparison)
+    const { data: todayEvents } = await supabase
+      .from('sessions')
+      .select(`
+        id,
+        title,
+        description,
+        start_time,
+        end_time,
+        room:room_id (room_name, location),
+        speaker:speaker_id (full_name, photo_url)
+      `)
+      .gte('start_time', `${todayStr}T00:00:00`)
+      .lte('start_time', `${todayStr}T23:59:59`)
+      .order('start_time', { ascending: true });
+
+    // 4. Fetch tomorrow's events
+    const { data: tomorrowEvents } = await supabase
+      .from('sessions')
+      .select(`
+        id,
+        title,
+        description,
+        start_time,
+        end_time,
+        room:room_id (room_name, location),
+        speaker:speaker_id (full_name, photo_url)
+      `)
+      .gte('start_time', `${tomorrowStr}T00:00:00`)
+      .lte('start_time', `${tomorrowStr}T23:59:59`)
+      .order('start_time', { ascending: true });
+
+    console.log("Fetched events:", {
+      today: todayEvents,
+      tomorrow: tomorrowEvents
+    });
+
+    // 5. Format and set data
+    const formatTimeRange = (start, end) => {
+      const options = { hour: '2-digit', minute: '2-digit' };
+      return `${new Date(start).toLocaleTimeString([], options)} - ${new Date(end).toLocaleTimeString([], options)}`;
+    };
+
+    setEventsData({
+      Today: todayEvents?.map(event => ({
+        id: event.id,
+        title: event.title,
+        time: formatTimeRange(event.start_time, event.end_time),
+        location: event.room?.room_name || "TBD",
+        color: getRandomColor(),
+        speaker: event.speaker?.full_name || "TBD",
+        description: event.description,
+        image: event.speaker?.photo_url || "https://via.placeholder.com/150"
+      })) || [],
+      Tomorrow: tomorrowEvents?.map(event => ({
+        id: event.id,
+        title: event.title,
+        time: formatTimeRange(event.start_time, event.end_time),
+        location: event.room?.room_name || "TBD",
+        color: getRandomColor(),
+        speaker: event.speaker?.full_name || "TBD",
+        description: event.description,
+        image: event.speaker?.photo_url || "https://via.placeholder.com/150"
+      })) || []
+    });
+
+  } catch (error) {
+    console.error("Error fetching events:", error);
+    // Optional: Set error state for UI
+    setEventsData({
+      Today: [],
+      Tomorrow: [],
+      error: "Failed to load events"
+    });
+  }
+};
+
+  const formatTime = (start, end) => {
+    const format = (dateStr) => {
+      const date = new Date(dateStr);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+    return `${format(start)} - ${format(end)}`;
+  };
+
+  const getRandomColor = () => {
+    const colors = ["#3b82f6", "#8b5cf6", "#22c55e", "#ec4899", "#eab308"];
+    return colors[Math.floor(Math.random() * colors.length)];
+  };
 
   const formattedDate = currentTime.toLocaleDateString("en-US", {
     weekday: "long",
@@ -88,27 +152,18 @@ export default function App() {
 
   if (loading) {
     return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: currentColors.background }]}
-      >
+      <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
         <ActivityIndicator size="large" color={currentColors.primaryButton} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: currentColors.background }]}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
       <StatusBar style={isDarkMode ? "light" : "dark"} />
 
       {/* Nav Bar */}
-      <View
-        style={[
-          styles.navBar,
-          { backgroundColor: currentColors.navBarBackground },
-        ]}
-      >
+      <View style={[styles.navBar, { backgroundColor: currentColors.navBarBackground }]}>
         <Text style={[styles.navTitle, { color: currentColors.textPrimary }]}>
           Home
         </Text>
@@ -126,15 +181,17 @@ export default function App() {
         </View>
       </View>
 
+      <View>
+        <StorySwiper />
+      </View>
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Profile Section */}
         <View style={styles.profileSection}>
           <View style={styles.profileImageWrapper}>
             <Image
               source={{
-                uri:
-                  profile?.avatar_url ||
-                  "https://readdy.ai/api/search-image?query=professional%20portrait%20photo%20of%20a%20young%20woman%20with%20shoulder%20length%20brown%20hair%2C%20friendly%20smile%2C%20business%20casual%20attire%2C%20high%20quality%2C%20studio%20lighting%2C%20clean%20background%2C%20professional%20headshot&width=100&height=100&seq=1&orientation=squarish",
+                uri: profile?.avatar_url || "https://readdy.ai/api/search-image?query=professional%20portrait%20photo%20of%20a%20young%20woman%20with%20shoulder%20length%20brown%20hair%2C%20friendly%20smile%2C%20business%20casual%20attire%2C%20high%20quality%2C%20studio%20lighting%2C%20clean%20background%2C%20professional%20headshot&width=100&height=100&seq=1&orientation=squarish",
               }}
               style={styles.profileImage}
             />
@@ -181,28 +238,30 @@ export default function App() {
         </View>
 
         {/* Upcoming Event Banner */}
-        <View style={[styles.upcomingEvent, { backgroundColor: currentColors.primaryButton }]}>
-          <View style={styles.upcomingEventTop}>
-            <View>
-              <Text style={styles.nextEventLabel}>NEXT EVENT</Text>
-              <Text style={styles.nextEventTitle}>Team Meeting</Text>
-              <View style={styles.upcomingEventRow}>
-                <FontAwesome5 name="clock" size={12} color="rgba(255,255,255,0.8)" style={{ marginRight: 4 }} />
-                <Text style={styles.upcomingEventText}>10:00 AM - 11:30 AM</Text>
-              </View>
-              <View style={styles.upcomingEventRow}>
-                <FontAwesome5 name="map-marker-alt" size={12} color="rgba(255,255,255,0.8)" style={{ marginRight: 4 }} />
-                <Text style={styles.upcomingEventText}>Conference Room A</Text>
+        {eventsData.Today.length > 0 && (
+          <View style={[styles.upcomingEvent, { backgroundColor: currentColors.primaryButton }]}>
+            <View style={styles.upcomingEventTop}>
+              <View>
+                <Text style={styles.nextEventLabel}>NEXT EVENT</Text>
+                <Text style={styles.nextEventTitle}>{eventsData.Today[0].title}</Text>
+                <View style={styles.upcomingEventRow}>
+                  <FontAwesome5 name="clock" size={12} color="rgba(255,255,255,0.8)" style={{ marginRight: 4 }} />
+                  <Text style={styles.upcomingEventText}>{eventsData.Today[0].time}</Text>
+                </View>
+                <View style={styles.upcomingEventRow}>
+                  <FontAwesome5 name="map-marker-alt" size={12} color="rgba(255,255,255,0.8)" style={{ marginRight: 4 }} />
+                  <Text style={styles.upcomingEventText}>{eventsData.Today[0].location}</Text>
+                </View>
               </View>
             </View>
+            <TouchableOpacity
+              style={[styles.joinButton, { backgroundColor: currentColors.secondaryButton }]}
+              onPress={() => router.push("/(screens)/Scanner")}
+            >
+              <Text style={[styles.joinButtonText, { color: currentColors.textPrimary }]}>Check In</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={[styles.joinButton, { backgroundColor: currentColors.secondaryButton }]}
-            onPress={() => router.push("/(screens)/Scanner")}
-          >
-            <Text style={styles.joinButtonText}>Check In</Text>
-          </TouchableOpacity>
-        </View>
+        )}
 
         {/* My Events */}
         <View style={{ marginTop: 24 }}>
@@ -252,7 +311,7 @@ export default function App() {
 
           {/* Event List */}
           <View style={{ marginTop: 16 }}>
-            {eventsData[selectedTab].length === 0 ? (
+            {(!eventsData[selectedTab] || eventsData[selectedTab].length === 0) ? (
               <Text style={{ color: currentColors.textSecondary, textAlign: "center", marginTop: "auto" }}>
                 No event data for {selectedTab}
               </Text>
@@ -263,7 +322,7 @@ export default function App() {
                     <View style={{ flexDirection: "row", alignItems: "center" }}>
                       <View style={[styles.eventColorBar, { backgroundColor: event.color }]} />
                       <View>
-                        <Text style={styles.eventTitle}>{event.title}</Text>
+                        <Text style={[styles.eventTitle, { color: currentColors.textPrimary }]}>{event.title}</Text>
                         <View style={styles.eventTimeRow}>
                           <FontAwesome5
                             name="clock"
@@ -305,11 +364,9 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f9fafb", // gray-50
-    // paddingVertical: 16,
+    backgroundColor: "#f9fafb",
   },
   navBar: {
-    // position: "absolute",
     top: 0,
     left: 0,
     right: 0,
@@ -337,7 +394,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#f3f4f6", // gray-100
+    backgroundColor: "#f3f4f6",
     justifyContent: "center",
     alignItems: "center",
     marginLeft: 12,
@@ -416,7 +473,6 @@ const styles = StyleSheet.create({
   },
   upcomingEvent: {
     marginTop: 32,
-    backgroundColor: "linear-gradient(90deg, #3b82f6 0%, #4f46e5 100%)", // fallback for gradient not supported on RN, so use a solid color or use libraries for gradients
     backgroundColor: "#3b82f6",
     borderRadius: 16,
     padding: 16,
@@ -446,13 +502,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "rgba(255,255,255,0.8)",
   },
-  videoIconWrapper: {
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 12,
-    padding: 8,
-    justifyContent: "center",
-    alignItems: "center",
-  },
   joinButton: {
     marginTop: 16,
     backgroundColor: "#fff",
@@ -463,7 +512,6 @@ const styles = StyleSheet.create({
   joinButtonText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#fff",
   },
   sectionTitle: {
     fontSize: 22,
@@ -480,22 +528,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     alignItems: "center",
-  },
-  tabButtonActive: {
-    backgroundColor: "#fff",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  tabButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#6b7280",
-  },
-  tabButtonTextActive: {
-    color: "#000",
   },
   eventCard: {
     borderRadius: 16,
@@ -529,42 +561,12 @@ const styles = StyleSheet.create({
   },
   eventTimeText: {
     fontSize: 14,
-    color: "#6b7280",
-  },
-  participantsStack: {
-    flexDirection: "row",
-    marginRight: 12,
-    position: "relative",
-    width: 60,
-    height: 28,
-  },
-  participantImage: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: "#fff",
-    position: "absolute",
-  },
-  moreParticipants: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#e5e7eb", // gray-300
-    justifyContent: "center",
-    alignItems: "center",
-    position: "absolute",
-  },
-  moreParticipantsText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#6b7280",
   },
   chevronButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#f3f4f6", // gray-100
+    backgroundColor: "#f3f4f6",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -577,42 +579,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6b7280",
   },
-  tabBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 56,
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderColor: "#e5e7eb", // gray-200
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-  },
-  tabBarItem: {
-    flex: 1,
-    alignItems: "center",
-  },
-  tabBarText: {
-    fontSize: 10,
-    fontWeight: "600",
-    marginTop: 2,
-  },
-  tabBarAddButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#3b82f6",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 28,
-    shadowColor: "#3b82f6",
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-  },
-   modalOverlay: {
+  modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
@@ -649,10 +616,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: "center",
   },
-
 });
-
-
-
-
-
