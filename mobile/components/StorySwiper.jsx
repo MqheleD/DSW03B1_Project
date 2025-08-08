@@ -13,7 +13,7 @@ export default function StorySwiper() {
 
   useEffect(() => {
     fetchSessions();
-    
+
     const channel = supabase
       .channel('public:sessions')
       .on(
@@ -22,20 +22,20 @@ export default function StorySwiper() {
         (payload) => {
           console.log('Change received!', payload);
           fetchSessions();
-          
-          switch (payload.eventType) {
-            case 'INSERT':
-              Alert.alert('New Session', 'A new session has been added!');
-              break;
-            case 'UPDATE':
-              Alert.alert('Session Updated', 'A session was just updated.');
-              break;
-            case 'DELETE':
-              Alert.alert('Session Removed', 'A session was deleted.');
-              break;
-            default:
-              break;
-          }
+
+          // switch (payload.eventType) {
+          //   case 'INSERT':
+          //     Alert.alert('New Session', 'A new session has been added!');
+          //     break;
+          //   case 'UPDATE':
+          //     Alert.alert('Session Updated', 'A session was just updated.');
+          //     break;
+          //   case 'DELETE':
+          //     Alert.alert('Session Removed', 'A session was deleted.');
+          //     break;
+          //   default:
+          //     break;
+          // }
         }
       )
       .subscribe();
@@ -46,28 +46,35 @@ export default function StorySwiper() {
   }, []);
 
 const fetchSessions = async () => {
-  const { data, error } = await supabase
-    .from('sessions')
-    .select(`
-      id, 
-      title, 
-      start_time, 
-      end_time,
-      room:room_id (room_name, location),
-      speaker:speaker_id (full_name, avatar_url)
-    `)
-    .order('start_time', { ascending: true });
+  try {
+    const { data, error } = await supabase
+      .from('sessions')
+      .select(`
+        id,
+        title,
+        description,
+        start_time,
+        end_time,
+        room:room_id (room_name, location),
+        speaker:speaker_id (full_name, photo_url)
+      `)
+      .order('start_time', { ascending: true });
 
-  if (error) {
-    console.error('Error fetching sessions:', error);
-  } else {
+    if (error) {
+      console.error('Error fetching sessions:', error);
+      return;  // Important to return early on error
+    }
+    
+    console.log('Fetched sessions:', data);  // Add this to verify data
     setSessions(data.map(session => ({
-      ...session,
-      speaker: session.speaker?.name || 'Unknown Speaker',
-      room: session.room?.room_name || 'Unknown Room', // Changed from name to room_name
-      location: session.room?.location || 'Location TBD', // Added location
-      image: session.speaker?.avatar_url || 'https://placeholder.com/150'
+  ...session,
+  speaker: session.speaker?.full_name || 'Unknown Speaker',
+  room: session.room?.room_name || 'Unknown Room',
+  location: session.room?.location || 'Location TBD',
+  image: session.speaker?.photo_url || 'https://placeholder.com/150'
     })));
+  } catch (err) {
+    console.error('Unexpected error:', err);
   }
 };
 

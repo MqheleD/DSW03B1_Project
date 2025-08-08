@@ -276,11 +276,11 @@ export default function Network() {
                 <Text style={[styles.noConnectionsSubtitle, { color: currentColors.textSecondary }]}>
                   Start building your network by connecting with others
                 </Text>
-                <TouchableOpacity
+                {/* <TouchableOpacity
                   style={[styles.inviteButton, { backgroundColor: currentColors.primaryButton }]}
                 >
                   <Text style={styles.inviteButtonText}>Invite Friends</Text>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
               </Animated.View>
             </View>
           ) : (

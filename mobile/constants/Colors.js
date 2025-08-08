@@ -15,8 +15,8 @@ export const Colors = {
     socialLinkBackground: '#EDF2F7',
     changePhotoButtonBackground: '#3182CE',
     logoutButtonBackground: '#E53E3E',
-    primaryButton: "#3b82f6", // AVIJOZI F0385B Blue 3b82f6
-    secondaryButton: "#93c5fd", // AVIJOZI FF8BA1 Blue 93c5fd
+    primaryButton: "#F0385B", // AVIJOZI F0385B Blue 3b82f6
+    secondaryButton: "#FF8BA1", // AVIJOZI FF8BA1 Blue 93c5fd
   },
   dark: {
     background: '#111111',
@@ -34,7 +34,7 @@ export const Colors = {
     socialLinkBackground: '#4A5568',
     changePhotoButtonBackground: '#3182CE',
     logoutButtonBackground: '#E53E3E',
-    primaryButton: "#3b82f6", // AVIJOZI F0385B Blue 3b82f6
-    secondaryButton: "#93c5fd", // AVIJOZI FF8BA1 Blue 93c5fd
+    primaryButton: "#F0385B", // AVIJOZI F0385B Blue 3b82f6
+    secondaryButton: "#FF8BA1", // AVIJOZI FF8BA1 Blue 93c5fd
   },
 };

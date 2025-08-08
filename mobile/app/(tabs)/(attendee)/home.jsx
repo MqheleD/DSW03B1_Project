@@ -1,3 +1,4 @@
+// screens/Home.js
 import React, { useState, useEffect, useContext } from "react";
 import {
   View,
@@ -13,11 +14,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-import StorySwiper from "@/components/StorySwiper";
+import StorySwiper from "../../../components/StorySwiper";
 import { ThemeContext } from "@/hooks/ThemeContext";
 import { UserAuth } from "@/hooks/AuthContext";
 import { router } from "expo-router";
 import supabase from "@/app/supabaseClient";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Home() {
   const [eventsData, setEventsData] = useState({ Today: [], Tomorrow: [] });
@@ -25,118 +27,153 @@ export default function Home() {
   const [selectedTab, setSelectedTab] = useState("Today");
   const [currentTime, setCurrentTime] = useState(new Date());
   const { currentColors, isDarkMode } = useContext(ThemeContext);
-  const { profile, loading } = UserAuth();
+  const { profile, loading: authLoading } = UserAuth();
+  const [favorites, setFavorites] = useState([]);
+  const [loading, setLoading] = useState(true);
 
+  // Load favorites
+  useEffect(() => {
+    const loadFavorites = async () => {
+      if (profile?.id) {
+        const key = `favorites_${profile.id}`;
+        const favs = await AsyncStorage.getItem(key);
+        setFavorites(favs ? JSON.parse(favs) : []);
+      }
+    };
+    loadFavorites();
+  }, [profile?.id]);
+
+  // Fetch events and save to AsyncStorage
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
-    fetchEvents();
+    
+    const fetchAndSaveEvents = async () => {
+      try {
+        const localDate = new Date();
+        const todayStr = localDate.toISOString().split('T')[0];
+        const tomorrow = new Date(localDate);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+        // Fetch today's and tomorrow's events
+        const { data: todayEvents } = await supabase
+          .from('sessions')
+          .select(`
+            id,
+            title,
+            description,
+            start_time,
+            end_time,
+            room:room_id (room_name, location),
+            speaker:speaker_id (full_name, photo_url)
+          `)
+          .gte('start_time', `${todayStr}T00:00:00`)
+          .lte('start_time', `${todayStr}T23:59:59`)
+          .order('start_time', { ascending: true });
+
+        const { data: tomorrowEvents } = await supabase
+          .from('sessions')
+          .select(`
+            id,
+            title,
+            description,
+            start_time,
+            end_time,
+            room:room_id (room_name, location),
+            speaker:speaker_id (full_name, photo_url)
+          `)
+          .gte('start_time', `${tomorrowStr}T00:00:00`)
+          .lte('start_time', `${tomorrowStr}T23:59:59`)
+          .order('start_time', { ascending: true });
+
+        // Format events
+        const formatTimeRange = (start, end) => {
+          const options = { hour: '2-digit', minute: '2-digit' };
+          return `${new Date(start).toLocaleTimeString([], options)} - ${new Date(end).toLocaleTimeString([], options)}`;
+        };
+
+        const formattedTodayEvents = todayEvents?.map(event => ({
+          id: event.id,
+          title: event.title,
+          time: formatTimeRange(event.start_time, event.end_time),
+          start_time: event.start_time,
+          end_time: event.end_time,
+          location: event.room?.room_name || "TBD",
+          room: { room_name: event.room?.room_name || "TBD" },
+          color: getRandomColor(),
+          speaker: event.speaker?.full_name || "TBD",
+          speaker_full: event.speaker || { full_name: "TBD" },
+          description: event.description,
+          image: event.speaker?.photo_url || "https://via.placeholder.com/150"
+        })) || [];
+
+        const formattedTomorrowEvents = tomorrowEvents?.map(event => ({
+          id: event.id,
+          title: event.title,
+          time: formatTimeRange(event.start_time, event.end_time),
+          start_time: event.start_time,
+          end_time: event.end_time,
+          location: event.room?.room_name || "TBD",
+          room: { room_name: event.room?.room_name || "TBD" },
+          color: getRandomColor(),
+          speaker: event.speaker?.full_name || "TBD",
+          speaker_full: event.speaker || { full_name: "TBD" },
+          description: event.description,
+          image: event.speaker?.photo_url || "https://via.placeholder.com/150"
+        })) || [];
+
+        setEventsData({
+          Today: formattedTodayEvents,
+          Tomorrow: formattedTomorrowEvents
+        });
+
+        // Save all sessions to AsyncStorage
+        if (profile?.id) {
+          const allSessions = [...formattedTodayEvents, ...formattedTomorrowEvents];
+          await AsyncStorage.setItem(`sessions_${profile.id}`, JSON.stringify(allSessions));
+          
+          // Also save to default key for first-time users
+          const existingDefault = await AsyncStorage.getItem('default_sessions');
+          if (!existingDefault) {
+            await AsyncStorage.setItem('default_sessions', JSON.stringify(allSessions));
+          }
+        }
+
+      } catch (error) {
+        console.error("Error fetching events:", error);
+        setEventsData({
+          Today: [],
+          Tomorrow: [],
+          error: "Failed to load events"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAndSaveEvents();
     return () => clearInterval(timer);
-  }, []);
+  }, [profile?.id]);
 
-const fetchEvents = async () => {
-  try {
-    // 1. Get device's LOCAL date (August 7, 2025)
-    const localDate = new Date();
-    console.log("Device Local Date:", localDate.toString());
-
-    // 2. Convert to YYYY-MM-DD string in LOCAL time (ignore timezone)
-    const getLocalDateString = (date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`; // "2025-08-07"
-    };
-
-    const todayStr = getLocalDateString(localDate);
-    const tomorrow = new Date(localDate);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = getLocalDateString(tomorrow);
-
-    console.log("Querying events for:", { todayStr, tomorrowStr });
-
-    // 3. Fetch today's events (timezone-agnostic date comparison)
-    const { data: todayEvents } = await supabase
-      .from('sessions')
-      .select(`
-        id,
-        title,
-        description,
-        start_time,
-        end_time,
-        room:room_id (room_name, location),
-        speaker:speaker_id (full_name, photo_url)
-      `)
-      .gte('start_time', `${todayStr}T00:00:00`)
-      .lte('start_time', `${todayStr}T23:59:59`)
-      .order('start_time', { ascending: true });
-
-    // 4. Fetch tomorrow's events
-    const { data: tomorrowEvents } = await supabase
-      .from('sessions')
-      .select(`
-        id,
-        title,
-        description,
-        start_time,
-        end_time,
-        room:room_id (room_name, location),
-        speaker:speaker_id (full_name, photo_url)
-      `)
-      .gte('start_time', `${tomorrowStr}T00:00:00`)
-      .lte('start_time', `${tomorrowStr}T23:59:59`)
-      .order('start_time', { ascending: true });
-
-    console.log("Fetched events:", {
-      today: todayEvents,
-      tomorrow: tomorrowEvents
-    });
-
-    // 5. Format and set data
-    const formatTimeRange = (start, end) => {
-      const options = { hour: '2-digit', minute: '2-digit' };
-      return `${new Date(start).toLocaleTimeString([], options)} - ${new Date(end).toLocaleTimeString([], options)}`;
-    };
-
-    setEventsData({
-      Today: todayEvents?.map(event => ({
-        id: event.id,
-        title: event.title,
-        time: formatTimeRange(event.start_time, event.end_time),
-        location: event.room?.room_name || "TBD",
-        color: getRandomColor(),
-        speaker: event.speaker?.full_name || "TBD",
-        description: event.description,
-        image: event.speaker?.photo_url || "https://via.placeholder.com/150"
-      })) || [],
-      Tomorrow: tomorrowEvents?.map(event => ({
-        id: event.id,
-        title: event.title,
-        time: formatTimeRange(event.start_time, event.end_time),
-        location: event.room?.room_name || "TBD",
-        color: getRandomColor(),
-        speaker: event.speaker?.full_name || "TBD",
-        description: event.description,
-        image: event.speaker?.photo_url || "https://via.placeholder.com/150"
-      })) || []
-    });
-
-  } catch (error) {
-    console.error("Error fetching events:", error);
-    // Optional: Set error state for UI
-    setEventsData({
-      Today: [],
-      Tomorrow: [],
-      error: "Failed to load events"
-    });
-  }
-};
-
-  const formatTime = (start, end) => {
-    const format = (dateStr) => {
-      const date = new Date(dateStr);
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    };
-    return `${format(start)} - ${format(end)}`;
+  const toggleFavorite = async (session) => {
+    if (!profile?.id) return;
+    
+    const key = `favorites_${profile.id}`;
+    try {
+      const isFavorite = favorites.some(fav => fav.id === session.id);
+      let updatedFavorites;
+      
+      if (isFavorite) {
+        updatedFavorites = favorites.filter(fav => fav.id !== session.id);
+      } else {
+        updatedFavorites = [...favorites, session];
+      }
+      
+      await AsyncStorage.setItem(key, JSON.stringify(updatedFavorites));
+      setFavorites(updatedFavorites);
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+    }
   };
 
   const getRandomColor = () => {
@@ -150,7 +187,7 @@ const fetchEvents = async () => {
     day: "numeric",
   });
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
         <ActivityIndicator size="large" color={currentColors.primaryButton} />
@@ -181,10 +218,6 @@ const fetchEvents = async () => {
         </View>
       </View>
 
-      <View>
-        <StorySwiper />
-      </View>
-
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Profile Section */}
         <View style={styles.profileSection}>
@@ -209,6 +242,10 @@ const fetchEvents = async () => {
             )}
             <Text style={styles.profileDate}>{formattedDate}</Text>
           </View>
+        </View>
+
+        <View style={{ height: 200, marginTop: 16 }}>  
+          <StorySwiper />
         </View>
 
         {/* Quick Actions */}
@@ -292,23 +329,6 @@ const fetchEvents = async () => {
             ))}
           </View>
 
-          {/* Modal */}
-          <Modal
-            transparent={true}
-            animationType="slide"
-            visible={modalVisible}
-            onRequestClose={() => setModalVisible(false)}
-          >
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalContainer}>
-                <Text style={styles.modalText}>Add the information here</Text>
-                <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
-                  <Text style={styles.modalButtons}>Close Modal</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </Modal>
-
           {/* Event List */}
           <View style={{ marginTop: 16 }}>
             {(!eventsData[selectedTab] || eventsData[selectedTab].length === 0) ? (
@@ -337,11 +357,12 @@ const fetchEvents = async () => {
                       </View>
                     </View>
 
-                    <TouchableOpacity
-                      style={styles.chevronButton}
-                      onPress={() => setModalVisible(true)}
-                    >
-                      <FontAwesome5 name="chevron-right" size={12} color="#9ca3af" />
+                    <TouchableOpacity onPress={() => toggleFavorite(event)}>
+                      <FontAwesome5 
+                        name={favorites.some(fav => fav.id === event.id) ? "heart" : "heart-o"} 
+                        size={16} 
+                        color={favorites.some(fav => fav.id === event.id) ? "#ec4899" : currentColors.textSecondary} 
+                      />
                     </TouchableOpacity>
                   </View>
 
@@ -562,14 +583,6 @@ const styles = StyleSheet.create({
   eventTimeText: {
     fontSize: 14,
   },
-  chevronButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#f3f4f6",
-    justifyContent: "center",
-    alignItems: "center",
-  },
   eventLocationRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -578,42 +591,5 @@ const styles = StyleSheet.create({
   eventLocationText: {
     fontSize: 14,
     color: "#6b7280",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContainer: {
-    width: "80%",
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 24,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 6,
-    elevation: 5,
-  },
-  modalText: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#111827",
-    textAlign: "center",
-  },
-  closeButton: {
-    marginTop: 20,
-    backgroundColor: "#3b82f6",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-  },
-  modalButtons: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 14,
-    textAlign: "center",
   },
 });

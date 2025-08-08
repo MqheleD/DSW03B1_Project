@@ -3,83 +3,146 @@ import {
   View,
   Text,
   Image,
+  Modal,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
   StatusBar,
-  Modal,
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-
+import StorySwiper from "../../../components/StorySwiper";
 import { ThemeContext } from "@/hooks/ThemeContext";
 import { UserAuth } from "@/hooks/AuthContext";
-import { router } from 'expo-router';
+import { router } from "expo-router";
+import supabase from "@/app/supabaseClient";
 
-const initialEventsData = {
-  Scheduled: [
-    {
-      id: 1,
-      title: "Team Meeting",
-      time: "10:00 AM - 11:30 AM",
-      location: "Conference Room A",
-      participants: 8,
-      color: "#3b82f6",
-    },
-    {
-      id: 2,
-      title: "Project Review",
-      time: "2:00 PM - 3:30 PM",
-      location: "Virtual Meeting",
-      participants: 5,
-      color: "#8b5cf6",
-    },
-    {
-      id: 3,
-      title: "Client Call",
-      time: "4:00 PM - 4:30 PM",
-      location: "Phone",
-      participants: 2,
-      color: "#22c55e",
-    },
-  ],
-  Completed: [
-    {
-      id: 4,
-      title: "Design Workshop",
-      time: "9:00 AM - 12:00 PM",
-      location: "Innovation Lab",
-      participants: 12,
-      color: "#ec4899",
-    },
-    {
-      id: 5,
-      title: "Lunch with Marketing",
-      time: "12:30 PM - 1:30 PM",
-      location: "Bistro Garden",
-      participants: 4,
-      color: "#eab308",
-    },
-  ],
-};
-
-export default function App() {
-  const [selectedTab, setSelectedTab] = useState("Scheduled");
+export default function Home() {
+  const [eventsData, setEventsData] = useState({ Today: [], Tomorrow: [] });
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedTab, setSelectedTab] = useState("Today");
   const [currentTime, setCurrentTime] = useState(new Date());
   const { currentColors, isDarkMode } = useContext(ThemeContext);
-  const [Visible, setVisible] = useState(false);
-  const [selectedPerson, setSelectedPerson] = useState(null);
   const { profile, loading } = UserAuth();
-
-  // Use React state for events data!
-  const [eventsData, setEventsData] = useState(initialEventsData);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    fetchEvents();
     return () => clearInterval(timer);
   }, []);
+
+const fetchEvents = async () => {
+  try {
+    // 1. Get device's LOCAL date (August 7, 2025)
+    const localDate = new Date();
+    console.log("Device Local Date:", localDate.toString());
+
+    // 2. Convert to YYYY-MM-DD string in LOCAL time (ignore timezone)
+    const getLocalDateString = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`; // "2025-08-07"
+    };
+
+    const todayStr = getLocalDateString(localDate);
+    const tomorrow = new Date(localDate);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = getLocalDateString(tomorrow);
+
+    console.log("Querying events for:", { todayStr, tomorrowStr });
+
+    // 3. Fetch today's events (timezone-agnostic date comparison)
+    const { data: todayEvents } = await supabase
+      .from('sessions')
+      .select(`
+        id,
+        title,
+        description,
+        start_time,
+        end_time,
+        room:room_id (room_name, location),
+        speaker:speaker_id (full_name, photo_url)
+      `)
+      .gte('start_time', `${todayStr}T00:00:00`)
+      .lte('start_time', `${todayStr}T23:59:59`)
+      .order('start_time', { ascending: true });
+
+    // 4. Fetch tomorrow's events
+    const { data: tomorrowEvents } = await supabase
+      .from('sessions')
+      .select(`
+        id,
+        title,
+        description,
+        start_time,
+        end_time,
+        room:room_id (room_name, location),
+        speaker:speaker_id (full_name, photo_url)
+      `)
+      .gte('start_time', `${tomorrowStr}T00:00:00`)
+      .lte('start_time', `${tomorrowStr}T23:59:59`)
+      .order('start_time', { ascending: true });
+
+    console.log("Fetched events:", {
+      today: todayEvents,
+      tomorrow: tomorrowEvents
+    });
+
+    // 5. Format and set data
+    const formatTimeRange = (start, end) => {
+      const options = { hour: '2-digit', minute: '2-digit' };
+      return `${new Date(start).toLocaleTimeString([], options)} - ${new Date(end).toLocaleTimeString([], options)}`;
+    };
+
+    setEventsData({
+      Today: todayEvents?.map(event => ({
+        id: event.id,
+        title: event.title,
+        time: formatTimeRange(event.start_time, event.end_time),
+        location: event.room?.room_name || "TBD",
+        color: getRandomColor(),
+        speaker: event.speaker?.full_name || "TBD",
+        description: event.description,
+        image: event.speaker?.photo_url || "https://via.placeholder.com/150"
+      })) || [],
+      Tomorrow: tomorrowEvents?.map(event => ({
+        id: event.id,
+        title: event.title,
+        time: formatTimeRange(event.start_time, event.end_time),
+        location: event.room?.room_name || "TBD",
+        color: getRandomColor(),
+        speaker: event.speaker?.full_name || "TBD",
+        description: event.description,
+        image: event.speaker?.photo_url || "https://via.placeholder.com/150"
+      })) || []
+    });
+
+  } catch (error) {
+    console.error("Error fetching events:", error);
+    // Optional: Set error state for UI
+    setEventsData({
+      Today: [],
+      Tomorrow: [],
+      error: "Failed to load events"
+    });
+  }
+};
+
+  const formatTime = (start, end) => {
+    const format = (dateStr) => {
+      const date = new Date(dateStr);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+    return `${format(start)} - ${format(end)}`;
+  };
+
+  const getRandomColor = () => {
+    const colors = ["#3b82f6", "#8b5cf6", "#22c55e", "#ec4899", "#eab308"];
+    return colors[Math.floor(Math.random() * colors.length)];
+  };
 
   const formattedDate = currentTime.toLocaleDateString("en-US", {
     weekday: "long",
@@ -95,60 +158,35 @@ export default function App() {
     );
   }
 
-  // Move from Scheduled to completed
-  const handleCompleted = () => {
-    if (!selectedPerson) return;
-
-    setEventsData((prev) => {
-      return {
-        Scheduled: prev.Scheduled.filter(e => e.id !== selectedPerson.id),
-        Completed: [...prev.Completed, selectedPerson],
-      };
-    });
-
-    setVisible(false);
-    setSelectedPerson(null);
-  };
-
-  // Move from Completed to Scheduled
-  const handleUndo = () => {
-    if (!selectedPerson) return;
-
-    setEventsData((prev) => {
-      return {
-        Scheduled: [...prev.Scheduled, selectedPerson],
-        Completed: prev.Completed.filter(e => e.id !== selectedPerson.id),
-      };
-    });
-
-    setVisible(false);
-    setSelectedPerson(null);
-  };
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
       <StatusBar style={isDarkMode ? "light" : "dark"} />
 
-      
+      {/* Nav Bar */}
       <View style={[styles.navBar, { backgroundColor: currentColors.navBarBackground }]}>
-        <Text style={[styles.navTitle, { color: currentColors.textPrimary }]}>Home</Text>
+        <Text style={[styles.navTitle, { color: currentColors.textPrimary }]}>
+          Home
+        </Text>
         <View style={styles.navIcons}>
           <TouchableOpacity
             style={[styles.iconButton, { backgroundColor: currentColors.cardBackground }]}
             onPress={() => router.push("/(screens)/Scanner")}
           >
-            <MaterialCommunityIcons name="line-scan" size={16} color={currentColors.textPrimary} />
+            <MaterialCommunityIcons
+              name="line-scan"
+              size={16}
+              color={currentColors.textPrimary}
+            />
           </TouchableOpacity>
         </View>
       </View>
-
       <ScrollView contentContainerStyle={styles.scrollContent}>
-       
+        {/* Profile Section */}
         <View style={styles.profileSection}>
           <View style={styles.profileImageWrapper}>
             <Image
               source={{
-                uri: profile?.avatar_url || "https://readdy.ai/api/search-image?query=professional%20portrait%20photo%20of%20a%20young%20woman%20with%20shoulder%20length%20brown%20hair&width=100&height=100&seq=1",
+                uri: profile?.avatar_url || "https://readdy.ai/api/search-image?query=professional%20portrait%20photo%20of%20a%20young%20woman%20with%20shoulder%20length%20brown%20hair%2C%20friendly%20smile%2C%20business%20casual%20attire%2C%20high%20quality%2C%20studio%20lighting%2C%20clean%20background%2C%20professional%20headshot&width=100&height=100&seq=1&orientation=squarish",
               }}
               style={styles.profileImage}
             />
@@ -161,12 +199,16 @@ export default function App() {
               </Text>
             ) : (
               <Text style={[styles.profileName, { color: currentColors.textSecondary }]}>
-                Hello, speaker!
+                Hello, Guest!
               </Text>
             )}
             <Text style={styles.profileDate}>{formattedDate}</Text>
           </View>
         </View>
+
+        <View style={{ height: 200, marginTop: 16 }}>  
+  <StorySwiper />
+</View>
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
@@ -177,9 +219,10 @@ export default function App() {
             <View style={[styles.actionIconCircle, { backgroundColor: "#dbeafe" }]}>
               <FontAwesome5 name="qrcode" size={20} color="#2563eb" />
             </View>
-            <Text style={[styles.actionText, { color: currentColors.textSecondary }]}>Scan QR Code</Text>
+            <Text style={[styles.actionText, { color: currentColors.textSecondary }]}>
+              Scan QR Code
+            </Text>
           </TouchableOpacity>
-
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: currentColors.cardBackground }]}
             onPress={() => router.push("/(screens)/ShareDetails")}
@@ -187,42 +230,47 @@ export default function App() {
             <View style={[styles.actionIconCircle, { backgroundColor: "#ede9fe" }]}>
               <FontAwesome5 name="share-alt" size={20} color="#7c3aed" />
             </View>
-            <Text style={[styles.actionText, { color: currentColors.textSecondary }]}>Share Details</Text>
+            <Text style={[styles.actionText, { color: currentColors.textSecondary }]}>
+              Share Details
+            </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Upcoming Event */}
-        <View style={[styles.upcomingEvent, { backgroundColor: currentColors.primaryButton }]}>
-          <View style={styles.upcomingEventTop}>
-            <View>
-              <Text style={styles.nextEventLabel}>NEXT EVENT</Text>
-              <Text style={styles.nextEventTitle}>Team Meeting</Text>
-              <View style={styles.upcomingEventRow}>
-                <FontAwesome5 name="clock" size={12} color="rgba(255,255,255,0.8)" style={{ marginRight: 4 }} />
-                <Text style={styles.upcomingEventText}>10:00 AM - 11:30 AM</Text>
-              </View>
-              <View style={styles.upcomingEventRow}>
-                <FontAwesome5 name="map-marker-alt" size={12} color="rgba(255,255,255,0.8)" style={{ marginRight: 4 }} />
-                <Text style={styles.upcomingEventText}>Conference Room A</Text>
+        {/* Upcoming Event Banner */}
+        {eventsData.Today.length > 0 && (
+          <View style={[styles.upcomingEvent, { backgroundColor: currentColors.primaryButton }]}>
+            <View style={styles.upcomingEventTop}>
+              <View>
+                <Text style={styles.nextEventLabel}>NEXT EVENT</Text>
+                <Text style={styles.nextEventTitle}>{eventsData.Today[0].title}</Text>
+                <View style={styles.upcomingEventRow}>
+                  <FontAwesome5 name="clock" size={12} color="rgba(255,255,255,0.8)" style={{ marginRight: 4 }} />
+                  <Text style={styles.upcomingEventText}>{eventsData.Today[0].time}</Text>
+                </View>
+                <View style={styles.upcomingEventRow}>
+                  <FontAwesome5 name="map-marker-alt" size={12} color="rgba(255,255,255,0.8)" style={{ marginRight: 4 }} />
+                  <Text style={styles.upcomingEventText}>{eventsData.Today[0].location}</Text>
+                </View>
               </View>
             </View>
+            <TouchableOpacity
+              style={[styles.joinButton, { backgroundColor: currentColors.secondaryButton }]}
+              onPress={() => router.push("/(screens)/Scanner")}
+            >
+              <Text style={[styles.joinButtonText, { color: currentColors.textPrimary }]}>Check In</Text>
+            </TouchableOpacity>
           </View>
-
-          <TouchableOpacity
-            style={[styles.joinButton, { backgroundColor: currentColors.secondaryButton }]}
-            onPress={() => router.push('/(screens)/Scanner')}
-          >
-            <Text style={styles.joinButtonText}>Check In</Text>
-          </TouchableOpacity>
-        </View>
+        )}
 
         {/* My Events */}
         <View style={{ marginTop: 24 }}>
-          <Text style={[styles.sectionTitle, { color: currentColors.textPrimary }]}>My Events</Text>
+          <Text style={[styles.sectionTitle, { color: currentColors.textPrimary }]}>
+            My Events
+          </Text>
 
           {/* Tab Switcher */}
           <View style={[styles.tabSwitcher, { backgroundColor: currentColors.secondaryButton }]}>
-            {["Scheduled", "Completed"].map((tab) => (
+            {["Today", "Tomorrow"].map((tab) => (
               <TouchableOpacity
                 key={tab}
                 onPress={() => setSelectedTab(tab)}
@@ -243,10 +291,27 @@ export default function App() {
             ))}
           </View>
 
-          {/* Events List */}
+          {/* Modal */}
+          <Modal
+            transparent={true}
+            animationType="slide"
+            visible={modalVisible}
+            onRequestClose={() => setModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContainer}>
+                <Text style={styles.modalText}>Add the information here</Text>
+                <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
+                  <Text style={styles.modalButtons}>Close Modal</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+
+          {/* Event List */}
           <View style={{ marginTop: 16 }}>
-            {eventsData[selectedTab].length === 0 ? (
-              <Text style={{ color: currentColors.textSecondary, textAlign: "center", marginTop: 'auto' }}>
+            {(!eventsData[selectedTab] || eventsData[selectedTab].length === 0) ? (
+              <Text style={{ color: currentColors.textSecondary, textAlign: "center", marginTop: "auto" }}>
                 No event data for {selectedTab}
               </Text>
             ) : (
@@ -256,20 +321,24 @@ export default function App() {
                     <View style={{ flexDirection: "row", alignItems: "center" }}>
                       <View style={[styles.eventColorBar, { backgroundColor: event.color }]} />
                       <View>
-                        <Text style={styles.eventTitle}>{event.title}</Text>
+                        <Text style={[styles.eventTitle, { color: currentColors.textPrimary }]}>{event.title}</Text>
                         <View style={styles.eventTimeRow}>
-                          <FontAwesome5 name="clock" size={12} color={currentColors.textSecondary} style={{ marginRight: 4 }} />
-                          <Text style={[styles.eventTimeText, { color: currentColors.textSecondary }]}>{event.time}</Text>
+                          <FontAwesome5
+                            name="clock"
+                            size={12}
+                            color={currentColors.textSecondary}
+                            style={{ marginRight: 4 }}
+                          />
+                          <Text style={[styles.eventTimeText, { color: currentColors.textSecondary }]}>
+                            {event.time}
+                          </Text>
                         </View>
                       </View>
                     </View>
 
                     <TouchableOpacity
                       style={styles.chevronButton}
-                      onPress={() => {
-                        setSelectedPerson(event);
-                        setVisible(true);
-                      }}
+                      onPress={() => setModalVisible(true)}
                     >
                       <FontAwesome5 name="chevron-right" size={12} color="#9ca3af" />
                     </TouchableOpacity>
@@ -277,7 +346,9 @@ export default function App() {
 
                   <View style={styles.eventLocationRow}>
                     <FontAwesome5 name="map-marker-alt" size={12} color="#6b7280" style={{ marginRight: 4 }} />
-                    <Text style={[styles.eventLocationText, { color: currentColors.textSecondary }]}>{event.location}</Text>
+                    <Text style={[styles.eventLocationText, { color: currentColors.textSecondary }]}>
+                      {event.location}
+                    </Text>
                   </View>
                 </View>
               ))
@@ -285,40 +356,9 @@ export default function App() {
           </View>
         </View>
       </ScrollView>
-
-      {/* Modal */}
-      <Modal visible={Visible} transparent animationType="slide" onRequestClose={() => setVisible(false)}>
-        <View style={styles.modalBackground}>
-          <View style={styles.modalContainer}>
-            {selectedPerson && (
-              <>
-              
-
-                <View style={styles.modalButtons}>
-                  <TouchableOpacity onPress={() => setVisible(false)} style={styles.buttonClose}>
-                    <Text style={styles.buttonText}>Close</Text>
-                  </TouchableOpacity>
-
-                 
-                  {selectedTab === "Scheduled" ? (
-                    <TouchableOpacity onPress={handleCompleted} style={styles.buttonLinkedIn}>
-                      <Text style={styles.buttonText}>Completed</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity onPress={handleUndo} style={[styles.buttonLinkedIn, { backgroundColor: "#ff9900" }]}>
-                      <Text style={styles.buttonText}>Undo</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </>
-            )}
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {
@@ -337,48 +377,59 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 8,
-    elevation: 5,
+    shadowRadius: 4,
+    elevation: 3,
     zIndex: 10,
   },
   navTitle: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: "600",
   },
   navIcons: {
     flexDirection: "row",
+    alignItems: "center",
   },
   iconButton: {
-    marginLeft: 10,
-    borderRadius: 20,
-    padding: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#f3f4f6",
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 12,
   },
   scrollContent: {
+    paddingTop: 20,
     paddingHorizontal: 16,
-    paddingBottom: 16,
-    paddingTop: 56,
+    paddingBottom: 100,
   },
   profileSection: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 24,
+    marginTop: 16,
   },
   profileImageWrapper: {
     position: "relative",
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
+    borderColor: "#3b82f6",
+    overflow: "hidden",
   },
   profileImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
   },
   onlineIndicator: {
     position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: "#34d399",
+    bottom: -2,
+    right: -2,
+    width: 20,
+    height: 20,
+    backgroundColor: "#22c55e",
+    borderRadius: 10,
     borderWidth: 2,
     borderColor: "#fff",
   },
@@ -391,18 +442,28 @@ const styles = StyleSheet.create({
     color: "#6b7280",
   },
   quickActions: {
+    marginTop: 32,
     flexDirection: "row",
     justifyContent: "space-between",
   },
   actionButton: {
-    alignItems: "center",
-    width: "48%",
+    flex: 1,
+    marginHorizontal: 6,
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 3,
+    elevation: 2,
+    alignItems: "center",
   },
   actionIconCircle: {
-    padding: 12,
-    borderRadius: 30,
+    width: 48,
+    height: 48,
+    borderRadius: 999999,
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 8,
   },
   actionText: {
@@ -410,65 +471,72 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   upcomingEvent: {
-    borderRadius: 20,
-    padding: 20,
-    marginTop: 24,
+    marginTop: 32,
+    backgroundColor: "#3b82f6",
+    borderRadius: 16,
+    padding: 16,
   },
   upcomingEventTop: {
     flexDirection: "row",
     justifyContent: "space-between",
   },
   nextEventLabel: {
-    color: "#d1d5db",
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 12,
+    fontWeight: "600",
+    opacity: 0.8,
+    color: "#fff",
   },
   nextEventTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "700",
+    marginTop: 4,
     color: "#fff",
-    marginBottom: 8,
   },
   upcomingEventRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 4,
+    marginTop: 8,
   },
   upcomingEventText: {
     fontSize: 14,
-    color: "#fff",
+    color: "rgba(255,255,255,0.8)",
   },
   joinButton: {
-    marginTop: 24,
-    borderRadius: 50,
-    paddingVertical: 14,
+    marginTop: 16,
+    backgroundColor: "#fff",
+    paddingVertical: 12,
+    borderRadius: 12,
     alignItems: "center",
   },
   joinButtonText: {
-    color: "#000",
-    fontWeight: "700",
-    fontSize: 18,
+    fontSize: 14,
+    fontWeight: "600",
   },
   sectionTitle: {
     fontSize: 22,
     fontWeight: "700",
   },
   tabSwitcher: {
+    marginTop: 16,
     flexDirection: "row",
-    borderRadius: 10,
-    overflow: "hidden",
-    marginTop: 12,
+    borderRadius: 12,
+    padding: 4,
   },
   tabButton: {
     flex: 1,
     paddingVertical: 8,
+    borderRadius: 8,
     alignItems: "center",
   },
   eventCard: {
     borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    marginBottom: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 3,
+    elevation: 2,
   },
   eventCardHeader: {
     flexDirection: "row",
@@ -478,72 +546,73 @@ const styles = StyleSheet.create({
   eventColorBar: {
     width: 6,
     height: 40,
-    borderRadius: 6,
+    borderRadius: 3,
     marginRight: 12,
   },
   eventTitle: {
-    fontSize: 18,
     fontWeight: "600",
-    color: "#111827",
+    fontSize: 16,
   },
   eventTimeRow: {
     flexDirection: "row",
     alignItems: "center",
+    marginTop: 4,
   },
   eventTimeText: {
     fontSize: 14,
   },
+  chevronButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#f3f4f6",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   eventLocationRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 6,
+    marginTop: 12,
   },
   eventLocationText: {
     fontSize: 14,
+    color: "#6b7280",
   },
-  chevronButton: {
-    padding: 8,
-  },
-  modalBackground: {
+  modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
   },
   modalContainer: {
-    width: "85%",
-    backgroundColor: "white",
-    borderRadius: 20,
-    padding: 20,
+    width: "80%",
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 24,
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  modalText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#111827",
+    textAlign: "center",
+  },
+  closeButton: {
+    marginTop: 20,
+    backgroundColor: "#3b82f6",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
   },
   modalButtons: {
-    flexDirection: "row",
-    marginTop: 20,
-    width: "100%",
-    justifyContent: "space-between",
-  },
-  buttonLinkedIn: {
-    flex: 1,
-    backgroundColor: "#007bff",
-    paddingVertical: 14,
-    borderRadius: 12,
-    marginLeft: 8,
-    marginRight: 8,
-    alignItems: "center",
-  },
-  buttonClose: {
-    flex: 1,
-    backgroundColor: "#6b7280",
-    paddingVertical: 14,
-    borderRadius: 12,
-    marginLeft: 8,
-    marginRight: 8,
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "white",
-    fontWeight: "700",
-    fontSize: 16,
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 14,
+    textAlign: "center",
   },
 });
