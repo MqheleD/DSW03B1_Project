@@ -32,45 +32,60 @@ export default function Network() {
 
   const { profile } = UserAuth();
 
-  // Load connections on mount and when profile changes
+  // Create animated values for each connection card
+  const scaleAnims = useRef({}).current;
+
+  // Initialize or update animated values when connections change
   useEffect(() => {
-    loadConnections();
-  }, [profile]);
+    connections.forEach(person => {
+      if (!scaleAnims[person.id]) {
+        scaleAnims[person.id] = new Animated.Value(1);
+      }
+    });
+  }, [connections]);
 
-  // const loadConnections = async () => {
-  //   try {
-  //     if (!profile?.id) {
-  //       setConnections([]);
-  //       return;
-  //     }
+  // Set up the ripple effect intervals
+  useEffect(() => {
+    const intervals = [];
 
-  //     const key = connections_${profile.id};
-  //     const storedConnections = await AsyncStorage.getItem(key);
-  //     if (storedConnections) {
-  //       const parsedConnections = JSON.parse(storedConnections);
-  //       setConnections(Array.isArray(parsedConnections) ? parsedConnections : []);
-  //       console.log('Loaded connections:', parsedConnections);
-  //     } else {
-  //       setConnections([]);
-  //     }
-  //   } catch (error) {
-  //     console.error('Failed to load connections:', error);
-  //     Alert.alert('Error', 'Failed to load your network connections.');
-  //   }
-  // };
+    connections.forEach((person, index) => {
+      const delay = 1500 * index; // Stagger the start of each animation
+      
+      const timeout = setTimeout(() => {
+        const interval = setInterval(() => {
+          bounce(person.id);
+        }, 3000); // Repeat every 3 seconds
+        
+        intervals.push(interval);
+      }, delay);
 
-  // const loadConnections = async () => {
-  //   try {
-  //         console.log(`'Network screen mounted, ${profile.id} connections'`);
-  //     const profileId = profile?.id || profile?.email; // Use a unique field
-  //     const savedConnections = await AsyncStorage.getItem(`network-${profile.id}`);
-  //     if (savedConnections) {
-  //       setConnections(JSON.parse(savedConnections));
-  //     }
-  //   } catch (error) {
-  //     console.log('Failed to load connections:', error);
-  //   }
-  // };
+      intervals.push(timeout);
+    });
+
+    return () => {
+      intervals.forEach((timer) => clearInterval(timer));
+    };
+  }, [connections]);
+
+  // The bounce animation function
+  const bounce = (id) => {
+    if (scaleAnims[id]) {
+      Animated.sequence([
+        Animated.spring(scaleAnims[id], {
+          toValue: 0.97,
+          friction: 1,
+          tension: 100,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnims[id], {
+          toValue: 1,
+          friction: 4,
+          tension: 20,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  };
 
   const loadConnections = async () => {
     try {
@@ -170,16 +185,10 @@ export default function Network() {
           style: "destructive",
           onPress: async () => {
             try {
-              // Filter out the person to be removed
               const filtered = connections.filter(p => p.id !== person.id);
-
-              // Update local state
               setConnections(filtered);
-
-              // Update AsyncStorage
               const storageKey = `network-${profile.id}`;
               await AsyncStorage.setItem(storageKey, JSON.stringify(filtered));
-
               console.log('Successfully removed connection:', person.name);
             } catch (error) {
               console.error('Failed to remove connection:', error);
@@ -190,6 +199,11 @@ export default function Network() {
       ]
     );
   };
+
+  // Load connections on mount and when profile changes
+  useEffect(() => {
+    loadConnections();
+  }, [profile]);
 
   return (
     <SafeAreaView
@@ -276,11 +290,6 @@ export default function Network() {
                 <Text style={[styles.noConnectionsSubtitle, { color: currentColors.textSecondary }]}>
                   Start building your network by connecting with others
                 </Text>
-                {/* <TouchableOpacity
-                  style={[styles.inviteButton, { backgroundColor: currentColors.primaryButton }]}
-                >
-                  <Text style={styles.inviteButtonText}>Invite Friends</Text>
-                </TouchableOpacity> */}
               </Animated.View>
             </View>
           ) : (
@@ -288,7 +297,7 @@ export default function Network() {
               <Animated.View
                 key={person.id || person.Email}
                 style={{
-                  transform: [{ scale: scaleValue }],
+                  transform: [{ scale: scaleAnims[person.id] || 1 }],
                 }}
               >
                 <TouchableOpacity
@@ -305,9 +314,8 @@ export default function Network() {
                   onPress={() => {
                     setSelectedPerson(person);
                     setVisible(true);
+                    bounce(person.id);
                   }}
-                  onPressIn={handlePressIn}
-                  onPressOut={handlePressOut}
                   activeOpacity={0.8}
                 >
                   <View style={{ flex: 1 }}>
@@ -706,16 +714,4 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     lineHeight: 24,
   },
-  inviteButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-  },
-  inviteButtonText: {
-    color: 'white',
-    fontWeight: '500',
-    fontSize: 16,
-  },
 });
-
-
