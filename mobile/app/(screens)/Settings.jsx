@@ -12,10 +12,12 @@ import {
   ScrollView,
   Platform,
   KeyboardAvoidingView,
-  Switch,
   ActivityIndicator,
+  Modal,
+  Pressable
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import DropDownPicker from 'react-native-dropdown-picker';
 import { UserAuth } from '@/hooks/AuthContext';
 import { Colors } from '@/constants/Colors';
 import { ThemeContext } from '@/hooks/ThemeContext';
@@ -32,37 +34,38 @@ export default function Settings() {
   const { signOut, profile, updateProfile } = UserAuth();
   const [uploading, setUploading] = useState(false);
   const [profileImage, setProfileImage] = useState(
-    profile?.avatar_url || "https://example.com/default-avatar.jpg"
+    profile?.avatar_url || 'https://example.com/default-avatar.jpg'
   );
-  const { isDarkMode, currentColors, toggleTheme } = useContext(ThemeContext);
+
+  const { theme, switchTheme, currentColors } = useContext(ThemeContext);
+  const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
+  const [isThemeModalVisible, setIsThemeModalVisible] = useState(false);
 
   const key = `socialLinks_${profile?.id}`;
-  // Load social links on component mount
+
   useEffect(() => {
     const loadSocialLinks = async () => {
       try {
         const storedLinks = await AsyncStorage.getItem(key);
-        if (storedLinks) {
-          setSocialLinks(JSON.parse(storedLinks));
-        }
+        if (storedLinks) setSocialLinks(JSON.parse(storedLinks));
       } catch (error) {
         console.error('Error loading social links:', error);
       }
     };
-    
     loadSocialLinks();
   }, []);
 
   const handleAddSocialLink = async () => {
-    if (socialLink.trim()) {
-      const newLinks = [...socialLinks, socialLink.trim()];
-      setSocialLinks(newLinks);
-      setSocialLink('');
-      try {
-        await AsyncStorage.setItem(key, JSON.stringify(newLinks));
-      } catch (error) {
-        Alert.alert('Error', 'Failed to save social link');
-      }
+    if (!socialLink.trim()) return;
+
+    const newLinks = [...socialLinks, socialLink.trim()];
+    setSocialLinks(newLinks);
+    setSocialLink('');
+
+    try {
+      await AsyncStorage.setItem(key, JSON.stringify(newLinks));
+    } catch (error) {
+      Alert.alert('Error', 'Failed to save social link');
     }
   };
 
@@ -70,6 +73,7 @@ export default function Settings() {
     const updatedLinks = [...socialLinks];
     updatedLinks.splice(index, 1);
     setSocialLinks(updatedLinks);
+
     try {
       await AsyncStorage.setItem(key, JSON.stringify(updatedLinks));
     } catch (error) {
@@ -79,8 +83,8 @@ export default function Settings() {
 
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (permissionResult.granted === false) {
-      Alert.alert("Permission required", "Permission to access photo library is required!");
+    if (!permissionResult.granted) {
+      Alert.alert('Permission required', 'Permission to access photo library is required!');
       return;
     }
 
@@ -101,7 +105,6 @@ export default function Settings() {
     try {
       setUploading(true);
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-
       if (userError || !user) {
         Alert.alert('Error', 'User not authenticated');
         return;
@@ -123,10 +126,7 @@ export default function Settings() {
 
       const { error: updateError } = await supabase
         .from('attendees')
-        .update({
-          avatar_url: publicUrl,
-          updated_at: new Date().toISOString(),
-        })
+        .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
         .eq('id', user.id);
 
       if (updateError) throw updateError;
@@ -147,19 +147,88 @@ export default function Settings() {
       await AsyncStorage.removeItem('socialLinks');
       router.replace('/(forms)/Login');
     } catch (error) {
-      console.log("Logout error:", error);
+      console.log('Logout error:', error);
     }
   };
 
-  // const toggleTheme = () => {
-  //   setIsDarkMode(!isDarkMode);
-  // };
+  const handleThemeSelect = (selectedTheme) => {
+    switchTheme(selectedTheme);
+  };
+
+  const handleModalClose = () => {
+    setIsThemeModalVisible(false);
+  };
+
+  const ThemeModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={isThemeModalVisible}
+      onRequestClose={() => setIsThemeModalVisible(false)}
+    >
+      <Pressable 
+        style={styles.modalOverlay}
+        onPress={() => setIsThemeModalVisible(false)}
+      >
+        <Pressable style={[styles.modalContent, { backgroundColor: currentColors.cardBackground }]}>
+          <Text style={[styles.modalTitle, { color: currentColors.textPrimary }]}>
+            Select Theme
+          </Text>
+          
+          {Object.keys(Colors).map((themeKey) => (
+            <TouchableOpacity
+              key={themeKey}
+              style={[
+                styles.themeOption,
+                { 
+                  backgroundColor: theme === themeKey 
+                    ? currentColors.primaryButton 
+                    : currentColors.background,
+                  borderColor: currentColors.border
+                }
+              ]}
+              onPress={() => handleThemeSelect(themeKey)}
+            >
+              <Text 
+                style={[
+                  styles.themeOptionText, 
+                  { 
+                    color: theme === themeKey 
+                      ? currentColors.buttonText 
+                      : currentColors.textPrimary 
+                  }
+                ]}
+              >
+                {themeKey.charAt(0).toUpperCase() + themeKey.slice(1)}
+              </Text>
+              {theme === themeKey && (
+                <MaterialCommunityIcons 
+                  name="check" 
+                  size={20} 
+                  color={currentColors.buttonText} 
+                />
+              )}
+            </TouchableOpacity>
+          ))}
+          
+          <TouchableOpacity
+            style={[styles.modalCloseButton, { backgroundColor: currentColors.primaryButton }]}
+            onPress={() => setIsThemeModalVisible(false)}
+          >
+            <Text style={{ color: currentColors.buttonText, fontWeight: '600' }}>
+              Close
+            </Text>
+          </TouchableOpacity>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
       <View style={[styles.navBar, { backgroundColor: currentColors.navBackground }]}>
-        <TouchableOpacity style={styles.navButton}>
-          <MaterialCommunityIcons name="chevron-left" size={24} color={currentColors.textPrimary} onPress={() => router.back()} />
+        <TouchableOpacity style={styles.navButton} onPress={() => router.back()}>
+          <MaterialCommunityIcons name="chevron-left" size={24} color={currentColors.textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.navTitle, { color: currentColors.textPrimary }]}>Settings</Text>
         <View style={{ width: 40 }} />
@@ -170,16 +239,14 @@ export default function Settings() {
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
-
           {/* Profile Image Section */}
           <View style={[styles.card, { backgroundColor: currentColors.cardBackground, alignItems: 'center' }]}>
-            <Text style={[styles.sectionTitle, { color: currentColors.textPrimary, marginBottom: 12 }]}>Profile Picture</Text>
+            <Text style={[styles.sectionTitle, { color: currentColors.textPrimary, marginBottom: 12 }]}>
+              Profile Picture
+            </Text>
             <View style={styles.imageContainer}>
               <TouchableOpacity onPress={pickImage} activeOpacity={0.7}>
-                <Image
-                  source={{ uri: profileImage }}
-                  style={styles.profileImage}
-                />
+                <Image source={{ uri: profileImage }} style={styles.profileImage} />
                 {uploading && (
                   <View style={styles.uploadingOverlay}>
                     <ActivityIndicator size="small" color="#fff" />
@@ -201,7 +268,9 @@ export default function Settings() {
 
           {/* Social Links Section */}
           <View style={[styles.card, { backgroundColor: currentColors.cardBackground }]}>
-            <Text style={[styles.sectionTitle, { color: currentColors.textPrimary, marginBottom: 8 }]}>Social Links</Text>
+            <Text style={[styles.sectionTitle, { color: currentColors.textPrimary, marginBottom: 8 }]}>
+              Social Links
+            </Text>
             <View style={styles.row}>
               <TextInput
                 style={[
@@ -233,7 +302,7 @@ export default function Settings() {
                   <View
                     style={[
                       styles.socialLinkItem,
-                      { backgroundColor: isDarkMode ? '#4A5568' : '#EDF2F7' },
+                      { backgroundColor: Colors[theme]?.cardSecondary || '#EDF2F7' },
                     ]}
                   >
                     <Text
@@ -243,10 +312,7 @@ export default function Settings() {
                     >
                       {item}
                     </Text>
-                    <TouchableOpacity
-                      onPress={() => handleRemoveSocialLink(index)}
-                      style={{ padding: 4 }}
-                    >
+                    <TouchableOpacity onPress={() => handleRemoveSocialLink(index)} style={{ padding: 4 }}>
                       <Text style={{ color: currentColors.removeButton, fontSize: 18 }}>×</Text>
                     </TouchableOpacity>
                   </View>
@@ -256,22 +322,22 @@ export default function Settings() {
             )}
           </View>
 
-          {/* Theme Toggle Section */}
+          {/* Theme Selector Section */}
           <View style={[styles.card, { backgroundColor: currentColors.cardBackground }]}>
-            <View style={styles.rowSpaceBetween}>
-              <View>
-                <Text style={[styles.sectionTitle, { color: currentColors.textPrimary }]}>Theme Mode</Text>
-                <Text style={[styles.sectionSubtitle, { color: currentColors.textSecondary }]}>
-                  {isDarkMode ? 'Dark Mode' : 'Light Mode'}
-                </Text>
-              </View>
-              <Switch
-                trackColor={currentColors.secondaryButton}
-                thumbColor={currentColors.primaryButton}
-                onValueChange={toggleTheme}
-                value={isDarkMode}
-              />
-            </View>
+            <Text style={[styles.sectionTitle, { color: currentColors.textPrimary }]}>Theme</Text>
+            <Text style={[styles.sectionSubtitle, { color: currentColors.textSecondary }]}>
+              Current: {theme.charAt(0).toUpperCase() + theme.slice(1)}
+            </Text>
+
+            <TouchableOpacity
+              style={[styles.themeButton, { backgroundColor: currentColors.primaryButton }]}
+              onPress={() => setIsThemeModalVisible(true)}
+              activeOpacity={0.7}
+            >
+              <Text style={{ color: currentColors.buttonText, fontWeight: '600' }}>
+                Change Theme
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {/* Logout Button */}
@@ -286,14 +352,15 @@ export default function Settings() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Theme Modal */}
+      <ThemeModal />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1
-  },
+  container: { flex: 1 },
   navBar: {
     height: 56,
     flexDirection: 'row',
@@ -303,100 +370,82 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#E2E8F0',
   },
-  navButton: {
-    position: 'absolute',
-    left: 12,
-    padding: 8,
-  },
-  navTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 80,
-  },
-  card: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+  navButton: { position: 'absolute', left: 12, padding: 8 },
+  navTitle: { fontSize: 18, fontWeight: '600' },
+  scrollContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 80 },
+  card: { 
+    borderRadius: 12, 
+    padding: 16, 
+    marginBottom: 16, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 1 }, 
+    shadowOpacity: 0.1, 
     shadowRadius: 4,
+    elevation: 2,
   },
-  row: {
-    flexDirection: 'row',
+  row: { flexDirection: 'row', alignItems: 'center' },
+  sectionTitle: { fontSize: 16, fontWeight: '600' },
+  sectionSubtitle: { fontSize: 12, marginTop: 2 },
+  input: { flex: 1, height: 40, borderRadius: 8, paddingHorizontal: 12, fontSize: 14 },
+  addButton: { width: 40, height: 40, borderTopRightRadius: 8, borderBottomRightRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  socialLinkItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, marginBottom: 4 },
+  socialLinkText: { flex: 1, fontSize: 14 },
+  imageContainer: { position: 'relative' },
+  profileImage: { width: 96, height: 96, borderRadius: 48, marginBottom: 12 },
+  uploadingOverlay: { position: 'absolute', width: 96, height: 96, borderRadius: 48, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  changePhotoButton: { paddingVertical: 8, paddingHorizontal: 24, borderRadius: 12 },
+  logoutButton: { paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+  themeButton: { 
+    paddingVertical: 12, 
+    borderRadius: 8, 
+    alignItems: 'center', 
+    marginTop: 12,
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 20,
   },
-  rowSpaceBetween: {
+  modalContent: {
+    width: '85%',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  themeOption: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    width: '100%',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
   },
-  sectionTitle: {
+  themeOptionText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
   },
-  sectionSubtitle: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  input: {
-    flex: 1,
-    height: 40,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 14,
-  },
-  addButton: {
-    width: 40,
-    height: 40,
-    backgroundColor: '#3182CE',
-    borderTopRightRadius: 8,
-    borderBottomRightRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  socialLinkItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-  },
-  socialLinkText: {
-    flex: 1,
-    fontSize: 14,
-  },
-  imageContainer: {
-    position: 'relative',
-  },
-  profileImage: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    marginBottom: 12,
-  },
-  uploadingOverlay: {
-    position: 'absolute',
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  changePhotoButton: {
-    paddingVertical: 8,
+  modalCloseButton: {
+    marginTop: 20,
+    paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 12,
-  },
-  logoutButton: {
-    paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 8,
+    alignSelf: 'stretch',
     alignItems: 'center',
   },
 });

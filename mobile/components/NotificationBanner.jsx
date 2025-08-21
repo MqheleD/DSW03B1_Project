@@ -39,7 +39,7 @@ export default function NotificationBanner({
     success: currentColors.success,
     error: currentColors.error,
     warning: currentColors.warning,
-    info: currentColors.primary,
+    info: currentColors.primaryButton,
   };
 
   const bgColor = typeColors[type] || typeColors.info;

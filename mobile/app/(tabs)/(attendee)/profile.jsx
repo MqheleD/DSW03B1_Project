@@ -59,9 +59,9 @@ export default function ProfileScreen() {
 
             {/* Banner Image */}
             <Image
-                source={{ uri: `https://placehold.co/600x200/${bannerColor}/ffffff/png?text=AVIJOZI25` }}
+                source={{ uri: `https://avijozi.zohobackstage.com/public/portals/880205061/siteResources/161390000000092631` }}
                 style={styles.bannerImage}
-                resizeMode="cover"
+                resizeMode="contain"
             />
 
             {/* Profile Picture Overlay */}
@@ -184,8 +184,12 @@ const styles = StyleSheet.create({
         zIndex: 10,
     },
     bannerImage: {
-        width: width,
+        width: width-25,
         height: 150,
+        backgroundColor: '#f3f4f6',
+        marginHorizontal: 'auto',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     profileImageContainer: {
         paddingHorizontal: 20,
