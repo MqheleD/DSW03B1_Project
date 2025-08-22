@@ -1,0 +1,26 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": false,
+    "allowJs": true,
+    "checkJs": false,  // 👈 Change this from true to false
+    "jsx": "react-native",
+    "baseUrl": ".",
+    "outDir": "build",
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.js",
+    "**/*.jsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+  ],
+  "exclude": [
+    "build",
+    "node_modules"
+  ]
+}
