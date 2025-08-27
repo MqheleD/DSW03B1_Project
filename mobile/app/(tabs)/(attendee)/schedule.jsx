@@ -1,5 +1,5 @@
 // screens/Schedule.js
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,15 +10,20 @@ import {
   FlatList,
   ActivityIndicator,
   Dimensions,
-  Alert
+  Alert,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import { ThemeContext } from "@/hooks/ThemeContext";
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { UserAuth } from '@/hooks/AuthContext';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { UserAuth } from "@/hooks/AuthContext";
+import supabase from "../../supabaseClient";
 
-const { width } = Dimensions.get('window');
+// ✅ import notifications
+import useNotification from "@/hooks/useNotification";
+
+const { width } = Dimensions.get("window");
 
 const Schedule = () => {
   const { profile } = UserAuth();
@@ -33,60 +38,87 @@ const Schedule = () => {
   const [uniqueRooms, setUniqueRooms] = useState([]);
   const [uniqueSpeakers, setUniqueSpeakers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Load data from AsyncStorage
+  // ✅ notifications hook
+  const { notification, showNotification } = useNotification();
+
   useEffect(() => {
     loadData();
   }, [profile?.id]);
 
+  const fetchFavorites = async () => {
+    if (!profile?.id) return;
+    const { data, error } = await supabase
+      .from("session_favorites")
+      .select("session_id")
+      .eq("user_id", profile.id);
+
+    if (error) {
+      console.error("Error fetching favorites:", error);
+      return;
+    }
+
+    setFavorites(data.map(f => f.session_id));
+    
+    // Also update AsyncStorage for offline use
+    const favoritesKey = `favorites_${profile.id}`;
+    await AsyncStorage.setItem(favoritesKey, JSON.stringify(data.map(f => f.session_id)));
+  };
+
   const loadData = async () => {
-      try {
-        if (!profile?.id) return;
+    try {
+      if (!profile?.id) return;
 
-        console.log("Loading schedule data for user:", profile.id);
+      console.log("Loading schedule data for user:", profile.id);
 
-        // Load favorites
-        const favoritesKey = `favorites_${profile.id}`;
-        const favs = await AsyncStorage.getItem(favoritesKey);
-        const parsedFavs = favs ? JSON.parse(favs) : [];
-        setFavorites(parsedFavs);
+      // Load sessions first
+      const sessionsKey = `sessions_${profile.id}`;
+      const sessionsData = await AsyncStorage.getItem(sessionsKey);
 
-        // Load sessions from storage
-        const sessionsKey = `sessions_${profile.id}`;
-        const sessionsData = await AsyncStorage.getItem(sessionsKey);
-        
-        if (sessionsData) {
-          const sessions = JSON.parse(sessionsData);
+      if (sessionsData) {
+        const sessions = JSON.parse(sessionsData);
+        setAllSessions(sessions);
+
+        setUniqueRooms([...new Set(sessions.map(s => s.room?.room_name).filter(Boolean))]);
+        setUniqueSpeakers([...new Set(sessions.map(s => s.speaker?.full_name).filter(Boolean))]);
+      } else {
+        // fallback: default sessions
+        const defaultSessions = await AsyncStorage.getItem("default_sessions");
+        if (defaultSessions) {
+          const sessions = JSON.parse(defaultSessions);
           setAllSessions(sessions);
-          
-          // Extract unique rooms and speakers
-          const rooms = [...new Set(sessions.map(s => s.room?.room_name).filter(Boolean))];
-          const speakers = [...new Set(sessions.map(s => s.speaker?.full_name).filter(Boolean))];
-          
-          setUniqueRooms(rooms);
-          setUniqueSpeakers(speakers);
-        } else {
-          // If no sessions found, load from default key (for first-time users)
-          const defaultSessions = await AsyncStorage.getItem('default_sessions');
-          if (defaultSessions) {
-            const sessions = JSON.parse(defaultSessions);
-            setAllSessions(sessions);
-            await AsyncStorage.setItem(sessionsKey, defaultSessions);
-            
-            const rooms = [...new Set(sessions.map(s => s.room?.room_name).filter(Boolean))];
-            const speakers = [...new Set(sessions.map(s => s.speaker?.full_name).filter(Boolean))];
-            
-            setUniqueRooms(rooms);
-            setUniqueSpeakers(speakers);
-          }
+          await AsyncStorage.setItem(sessionsKey, defaultSessions);
+
+          setUniqueRooms([...new Set(sessions.map(s => s.room?.room_name).filter(Boolean))]);
+          setUniqueSpeakers([...new Set(sessions.map(s => s.speaker?.full_name).filter(Boolean))]);
         }
-      } catch (error) {
-        console.error("Error loading data:", error);
-        Alert.alert("Error", "Failed to load schedule data");
-      } finally {
-        setLoading(false);
       }
-    };
+
+      // Load favorites from Supabase (this ensures sync with database)
+      await fetchFavorites();
+
+    } catch (error) {
+      console.error("Error loading data:", error);
+      Alert.alert("Error", "Failed to load schedule data");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadData();
+  }, [profile?.id]);
+
+  // ✅ auto-refresh if a favorited session was updated
+  useEffect(() => {
+    if (notification && showNotification) {
+      console.log("Notification received on Schedule screen:", notification.message);
+      loadData(); // reload from AsyncStorage to keep up-to-date
+    }
+  }, [notification, showNotification]);
 
   // Filter sessions based on criteria
   const getFilteredSessions = () => {
@@ -111,7 +143,7 @@ const Schedule = () => {
       }
 
       // Favorites filter
-      if (activeTab === "Favorites" && !favorites.some(fav => fav.id === session.id)) {
+      if (activeTab === "Favorites" && !favorites.includes(session.id)) {
         return false;
       }
 
@@ -144,25 +176,49 @@ const Schedule = () => {
     });
   };
 
-  const toggleFavorite = async (session) => {
-    if (!profile?.id) return;
-    
-    const key = `favorites_${profile.id}`;
+  const toggleFavorite = async (sessionId) => {
+    if (!profile?.id) {
+      Alert.alert("Error", "You must be logged in to favorite sessions.");
+      return;
+    }
+
     try {
-      const isFavorite = favorites.some(fav => fav.id === session.id);
-      let updatedFavorites;
-      
-      if (isFavorite) {
-        updatedFavorites = favorites.filter(fav => fav.id !== session.id);
+      if (favorites.includes(sessionId)) {
+        // Remove from Supabase first
+        const { error } = await supabase
+          .from("session_favorites")
+          .delete()
+          .eq("user_id", profile.id)
+          .eq("session_id", sessionId);
+
+        if (error) throw error;
+
+        // Then update local state
+        const updatedFavorites = favorites.filter(id => id !== sessionId);
+        setFavorites(updatedFavorites);
+        
+        // Update AsyncStorage
+        const favoritesKey = `favorites_${profile.id}`;
+        await AsyncStorage.setItem(favoritesKey, JSON.stringify(updatedFavorites));
       } else {
-        updatedFavorites = [...favorites, session];
+        // Add to Supabase first
+        const { error } = await supabase
+          .from("session_favorites")
+          .insert([{ user_id: profile.id, session_id: sessionId }]);
+
+        if (error) throw error;
+
+        // Then update local state
+        const updatedFavorites = [...favorites, sessionId];
+        setFavorites(updatedFavorites);
+        
+        // Update AsyncStorage
+        const favoritesKey = `favorites_${profile.id}`;
+        await AsyncStorage.setItem(favoritesKey, JSON.stringify(updatedFavorites));
       }
-      
-      await AsyncStorage.setItem(key, JSON.stringify(updatedFavorites));
-      setFavorites(updatedFavorites);
-    } catch (error) {
-      console.error("Error toggling favorite:", error);
-      Alert.alert("Error", "Failed to update favorites");
+    } catch (err) {
+      console.error("Error toggling favorite:", err);
+      Alert.alert("Error", "Could not update favorite.");
     }
   };
 
@@ -172,21 +228,18 @@ const Schedule = () => {
       { 
         backgroundColor: currentColors.cardBackground,
         borderLeftWidth: 4,
-        borderLeftColor: favorites.some(fav => fav.id === item.id) ? currentColors.primaryButton : 'transparent'
+        borderLeftColor: favorites.includes(item.id) ? currentColors.primaryButton : 'transparent'
       }
     ]}>
       <View style={styles.sessionHeader}>
         <Text style={[styles.sessionTitle, { color: currentColors.textPrimary }]}>
           {item.title}
         </Text>
-        <TouchableOpacity 
-          onPress={() => toggleFavorite(item)}
-          style={styles.favoriteButton}
-        >
+        <TouchableOpacity onPress={() => toggleFavorite(item.id)}>
           <Ionicons
-            name={favorites.some(fav => fav.id === item.id) ? "heart" : "heart-outline"}
-            size={20}
-            color={favorites.some(fav => fav.id === item.id) ? "#ec4899" : currentColors.textSecondary}
+            name={favorites.includes(item.id) ? "heart" : "heart-outline"}
+            size={24}
+            color={favorites.includes(item.id) ? "red" : currentColors.text}
           />
         </TouchableOpacity>
       </View>
@@ -236,6 +289,11 @@ const Schedule = () => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
       {/* Header */}
+      {notification && showNotification && (
+        <View style={{ padding: 10, backgroundColor: "#fef3c7", borderRadius: 8, marginBottom: 10 }}>
+          <Text style={{ color: "#92400e" }}>{notification.message}</Text>
+        </View>
+      )}
       <View style={styles.header}>
         <Text style={[styles.headerText, { color: currentColors.textPrimary }]}>
           My Schedule
@@ -410,12 +468,20 @@ const Schedule = () => {
         </View>
       )}
 
-      {/* Session List */}
+      {/* Session List with Pull to Refresh */}
       <FlatList
         data={getFilteredSessions()}
         renderItem={renderSessionItem}
         keyExtractor={item => item.id?.toString() || Math.random().toString()}
         contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[currentColors.primaryButton]}
+            tintColor={currentColors.primaryButton}
+          />
+        }
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <FontAwesome5 
@@ -478,6 +544,7 @@ const styles = StyleSheet.create({
   },
   filterScrollContent: {
     paddingHorizontal: 4,
+    paddingBottom: 4,
   },
   filterPill: {
     paddingHorizontal: 18,

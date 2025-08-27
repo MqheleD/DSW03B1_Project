@@ -1,6 +1,6 @@
+import { useState, useEffect } from "react";
 import { Stack } from "expo-router";
 import { StatusBar, View } from "react-native";
-import { useState, useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ThemeProvider } from "@/hooks/ThemeContext";
 import { AuthContextProvider } from "../hooks/AuthContext";
@@ -10,7 +10,6 @@ import useNotification from "@/hooks/useNotification";
 
 export default function RootLayout() {
   const [showSplash, setShowSplash] = useState(true);
-  const { notification, showNotification } = useNotification();
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -32,18 +31,27 @@ export default function RootLayout() {
           {/* Main app content */}
           <View style={{ flex: 1 }}>
             <Stack screenOptions={{ headerShown: false }} />
-            
+
             {/* Notification Banner */}
-            {notification && (
-              <NotificationBanner 
-                message={notification.message}
-                animation={notification.animation}
-                visible={showNotification}
-              />
-            )}
+            <NotificationWrapper />
           </View>
         </GestureHandlerRootView>
       </ThemeProvider>
     </AuthContextProvider>
+  );
+}
+
+// 👇 new component that uses the hook *inside* the provider
+function NotificationWrapper() {
+  const { notification, showNotification } = useNotification();
+
+  if (!notification) return null;
+
+  return (
+    <NotificationBanner 
+      message={notification.message}
+      animation={notification.animation}
+      visible={showNotification}
+    />
   );
 }

@@ -1,10 +1,10 @@
 // screens/Home.js
+// screens/Home.js
 import React, { useState, useEffect, useContext } from "react";
 import {
   View,
   Text,
   Image,
-  Modal,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
@@ -19,17 +19,22 @@ import { ThemeContext } from "@/hooks/ThemeContext";
 import { UserAuth } from "@/hooks/AuthContext";
 import { router } from "expo-router";
 import supabase from "@/app/supabaseClient";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// ✅ import notifications hook
+import useNotification from "@/hooks/useNotification";
 
 export default function Home() {
   const [eventsData, setEventsData] = useState({ Today: [], Tomorrow: [] });
-  const [modalVisible, setModalVisible] = useState(false);
   const [selectedTab, setSelectedTab] = useState("Today");
   const [currentTime, setCurrentTime] = useState(new Date());
   const { currentColors, isDarkMode } = useContext(ThemeContext);
   const { profile, loading: authLoading } = UserAuth();
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // ✅ grab notifications (they’ll also show globally via RootLayout)
+  const { notification, showNotification } = useNotification();
 
   // Load favorites
   useEffect(() => {
@@ -43,22 +48,22 @@ export default function Home() {
     loadFavorites();
   }, [profile?.id]);
 
-  // Fetch events and save to AsyncStorage
+  // Fetch events
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
-    
+
     const fetchAndSaveEvents = async () => {
       try {
         const localDate = new Date();
-        const todayStr = localDate.toISOString().split('T')[0];
+        const todayStr = localDate.toISOString().split("T")[0];
         const tomorrow = new Date(localDate);
         tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowStr = tomorrow.toISOString().split('T')[0];
+        const tomorrowStr = tomorrow.toISOString().split("T")[0];
 
-        // Fetch today's and tomorrow's events
         const { data: todayEvents } = await supabase
-          .from('sessions')
-          .select(`
+          .from("sessions")
+          .select(
+            `
             id,
             title,
             description,
@@ -66,14 +71,16 @@ export default function Home() {
             end_time,
             room:room_id (room_name, location),
             speaker:speaker_id (full_name, photo_url)
-          `)
-          .gte('start_time', `${todayStr}T00:00:00`)
-          .lte('start_time', `${todayStr}T23:59:59`)
-          .order('start_time', { ascending: true });
+          `
+          )
+          .gte("start_time", `${todayStr}T00:00:00`)
+          .lte("start_time", `${todayStr}T23:59:59`)
+          .order("start_time", { ascending: true });
 
         const { data: tomorrowEvents } = await supabase
-          .from('sessions')
-          .select(`
+          .from("sessions")
+          .select(
+            `
             id,
             title,
             description,
@@ -81,18 +88,20 @@ export default function Home() {
             end_time,
             room:room_id (room_name, location),
             speaker:speaker_id (full_name, photo_url)
-          `)
-          .gte('start_time', `${tomorrowStr}T00:00:00`)
-          .lte('start_time', `${tomorrowStr}T23:59:59`)
-          .order('start_time', { ascending: true });
+          `
+          )
+          .gte("start_time", `${tomorrowStr}T00:00:00`)
+          .lte("start_time", `${tomorrowStr}T23:59:59`)
+          .order("start_time", { ascending: true });
 
-        // Format events
         const formatTimeRange = (start, end) => {
-          const options = { hour: '2-digit', minute: '2-digit' };
-          return `${new Date(start).toLocaleTimeString([], options)} - ${new Date(end).toLocaleTimeString([], options)}`;
+          const options = { hour: "2-digit", minute: "2-digit" };
+          return `${new Date(start).toLocaleTimeString([], options)} - ${new Date(
+            end
+          ).toLocaleTimeString([], options)}`;
         };
 
-        const formattedTodayEvents = todayEvents?.map(event => ({
+        const formatEvent = (event) => ({
           id: event.id,
           title: event.title,
           time: formatTimeRange(event.start_time, event.end_time),
@@ -104,48 +113,35 @@ export default function Home() {
           speaker: event.speaker?.full_name || "TBD",
           speaker_full: event.speaker || { full_name: "TBD" },
           description: event.description,
-          image: event.speaker?.photo_url || "https://via.placeholder.com/150"
-        })) || [];
-
-        const formattedTomorrowEvents = tomorrowEvents?.map(event => ({
-          id: event.id,
-          title: event.title,
-          time: formatTimeRange(event.start_time, event.end_time),
-          start_time: event.start_time,
-          end_time: event.end_time,
-          location: event.room?.room_name || "TBD",
-          room: { room_name: event.room?.room_name || "TBD" },
-          color: getRandomColor(),
-          speaker: event.speaker?.full_name || "TBD",
-          speaker_full: event.speaker || { full_name: "TBD" },
-          description: event.description,
-          image: event.speaker?.photo_url || "https://via.placeholder.com/150"
-        })) || [];
-
-        setEventsData({
-          Today: formattedTodayEvents,
-          Tomorrow: formattedTomorrowEvents
+          image: event.speaker?.photo_url || "https://via.placeholder.com/150",
         });
 
-        // Save all sessions to AsyncStorage
+        setEventsData({
+          Today: todayEvents?.map(formatEvent) || [],
+          Tomorrow: tomorrowEvents?.map(formatEvent) || [],
+        });
+
         if (profile?.id) {
-          const allSessions = [...formattedTodayEvents, ...formattedTomorrowEvents];
-          await AsyncStorage.setItem(`sessions_${profile.id}`, JSON.stringify(allSessions));
-          
-          // Also save to default key for first-time users
-          const existingDefault = await AsyncStorage.getItem('default_sessions');
+          const allSessions = [
+            ...(todayEvents?.map(formatEvent) || []),
+            ...(tomorrowEvents?.map(formatEvent) || []),
+          ];
+          await AsyncStorage.setItem(
+            `sessions_${profile.id}`,
+            JSON.stringify(allSessions)
+          );
+
+          const existingDefault = await AsyncStorage.getItem("default_sessions");
           if (!existingDefault) {
-            await AsyncStorage.setItem('default_sessions', JSON.stringify(allSessions));
+            await AsyncStorage.setItem(
+              "default_sessions",
+              JSON.stringify(allSessions)
+            );
           }
         }
-
       } catch (error) {
         console.error("Error fetching events:", error);
-        setEventsData({
-          Today: [],
-          Tomorrow: [],
-          error: "Failed to load events"
-        });
+        setEventsData({ Today: [], Tomorrow: [], error: "Failed to load events" });
       } finally {
         setLoading(false);
       }
@@ -157,18 +153,13 @@ export default function Home() {
 
   const toggleFavorite = async (session) => {
     if (!profile?.id) return;
-    
     const key = `favorites_${profile.id}`;
     try {
-      const isFavorite = favorites.some(fav => fav.id === session.id);
-      let updatedFavorites;
-      
-      if (isFavorite) {
-        updatedFavorites = favorites.filter(fav => fav.id !== session.id);
-      } else {
-        updatedFavorites = [...favorites, session];
-      }
-      
+      const isFavorite = favorites.some((fav) => fav.id === session.id);
+      const updatedFavorites = isFavorite
+        ? favorites.filter((fav) => fav.id !== session.id)
+        : [...favorites, session];
+
       await AsyncStorage.setItem(key, JSON.stringify(updatedFavorites));
       setFavorites(updatedFavorites);
     } catch (error) {
@@ -189,7 +180,9 @@ export default function Home() {
 
   if (authLoading || loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: currentColors.background }]}
+      >
         <ActivityIndicator size="large" color={currentColors.primaryButton} />
       </SafeAreaView>
     );
@@ -198,6 +191,13 @@ export default function Home() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
       <StatusBar style={isDarkMode ? "light" : "dark"} />
+
+      {/* ✅ Notification debug (optional since RootLayout already handles banner) */}
+      {notification && showNotification && (
+        <View style={{ padding: 10, backgroundColor: "#fef3c7", margin: 10, borderRadius: 8 }}>
+          <Text style={{ color: "#92400e" }}>{notification.message}</Text>
+        </View>
+      )}
 
       {/* Nav Bar */}
       <View style={[styles.navBar, { backgroundColor: currentColors.navBarBackground }]}>

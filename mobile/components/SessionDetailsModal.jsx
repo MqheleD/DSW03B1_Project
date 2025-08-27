@@ -1,11 +1,11 @@
 // components/SessionDetailsModal.js
 import React from "react";
-import { 
-  View, 
-  Text, 
-  Image, 
-  StyleSheet, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  TouchableOpacity,
   ScrollView,
   Platform,
   Alert
@@ -18,8 +18,8 @@ import { UserAuth } from '@/hooks/AuthContext';
 
 export default function SessionDetailsModal({ session, onClose }) {
   if (!session) return null;
-    const { profile } = UserAuth();
-    const key = `favorites_${profile?.id}`;
+  const { profile } = UserAuth();
+  const key = `favorites_${profile?.id}`;
 
   const addToFavorites = async (sessionData) => {
     if (!sessionData || !profile?.id) {
@@ -33,23 +33,22 @@ export default function SessionDetailsModal({ session, onClose }) {
       const currentFavorites = existing ? JSON.parse(existing) : [];
 
       const alreadyExists = currentFavorites.some(
-        s => s.id === sessionData.id 
+        s => s.id === sessionData.id
       );
 
       if (!alreadyExists) {
         const updated = [...currentFavorites, sessionData];
         await AsyncStorage.setItem(key, JSON.stringify(updated));
-
+        Alert.alert('Success', 'Added to favorites!');
       } else {
         Alert.alert(
-          'Info', 
-          `${sessionData.title} is already in your saved.`,
-          // [{ text: "OK", onPress: resetScanner }]
+          'Info',
+          `${sessionData.title} is already in your saved sessions.`
         );
       }
     } catch (error) {
-      console.error('Failed to save to network:', error);
-      Alert.alert('Error', 'Failed to save connection. Please try again.');
+      console.error('Failed to save to favorites:', error);
+      Alert.alert('Error', 'Failed to save session. Please try again.');
     }
   };
 
@@ -65,8 +64,8 @@ export default function SessionDetailsModal({ session, onClose }) {
           </TouchableOpacity>
 
           <View style={styles.imageContainer}>
-            <Image 
-              source={{ uri: session.image || 'https://via.placeholder.com/400x200?text=No+Image' }} 
+            <Image
+              source={{ uri: session.image || 'https://via.placeholder.com/400x200?text=No+Image' }}
               style={styles.image}
               resizeMode="cover"
             />
@@ -78,21 +77,36 @@ export default function SessionDetailsModal({ session, onClose }) {
 
           <View style={styles.content}>
             <Text style={styles.title}>{session.title}</Text>
-            
+
             <View style={styles.metaContainer}>
               <View style={styles.metaItem}>
                 <Ionicons name="person" size={16} color="#3AD6BD" />
                 <Text style={styles.metaText}>{session.speaker}</Text>
               </View>
-              
+
               <View style={styles.metaItem}>
                 <Ionicons name="time" size={16} color="#3AD6BD" />
-                <Text style={styles.metaText}>{session.start_time}</Text>
+                <Text style={styles.metaText}>
+                  {new Date(session.start_time).toLocaleTimeString([], { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                  })} - {new Date(session.end_time).toLocaleTimeString([], { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                  })}
+                </Text>
               </View>
-              
+
               <View style={styles.metaItem}>
                 <Ionicons name="location" size={16} color="#3AD6BD" />
-                <Text style={styles.metaText}>{session.room}</Text>
+                <Text style={styles.metaText}>{session.room} ({session.location})</Text>
+              </View>
+
+              <View style={styles.metaItem}>
+                <FontAwesome name="tag" size={16} color="#3AD6BD" />
+                <Text style={styles.metaText}>
+                  {Array.isArray(session.tags) ? session.tags.join(", ") : session.tags}
+                </Text>
               </View>
             </View>
 
@@ -101,10 +115,11 @@ export default function SessionDetailsModal({ session, onClose }) {
             </Text>
 
             <View style={styles.actionButtons}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.button, styles.primaryButton]}
-                onPress={addToFavorites.bind(null, session)}
+                onPress={() => addToFavorites(session)}
               >
+                <Ionicons name="heart" size={20} color="#fff" />
                 <Text style={styles.buttonText}>Add to Favorites</Text>
               </TouchableOpacity>
             </View>
