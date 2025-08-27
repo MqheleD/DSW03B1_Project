@@ -1,10 +1,13 @@
 import { StatusBar } from "expo-status-bar";
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect,useContext } from "react";
 import { StyleSheet, View, Image, Animated } from "react-native";
+import { ThemeContext } from "@/hooks/ThemeContext";
+
 
 export default function SplashScreen() {
   const pinkAnim = useRef(new Animated.Value(-300)).current;
   const whiteAnim = useRef(new Animated.Value(300)).current;
+  const { currentColors } = useContext(ThemeContext);
 
   useEffect(() => {
     Animated.parallel([
@@ -22,7 +25,7 @@ export default function SplashScreen() {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container,{backgroundColor:currentColors.background}]}>
       <View style={styles.backgroundBlocks}>
         <Animated.View
           style={[styles.pinkBlock, { transform: [{ translateX: pinkAnim }] }]}
@@ -46,7 +49,7 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000",
+   // backgroundColor: "#000",
     alignItems: "center",
     justifyContent: "center",
   },

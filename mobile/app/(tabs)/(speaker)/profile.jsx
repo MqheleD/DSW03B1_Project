@@ -16,6 +16,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { ThemeContext } from "@/hooks/ThemeContext";
 import { UserAuth } from "@/hooks/AuthContext";
 import { router } from 'expo-router';
+import avijozi25_logo from "../../../assets/images/avijozi25_logo.png";
 
 const { width } = Dimensions.get('window');
 
@@ -57,12 +58,11 @@ export default function ProfileScreen() {
         <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
             <StatusBar barStyle="light-content" />
 
+             
+                 
+
             {/* Banner Image */}
-            <Image
-                source={{ uri: `https://placehold.co/600x200/${bannerColor}/ffffff/png?text=AVIJOZI25` }}
-                style={styles.bannerImage}
-                resizeMode="cover"
-            />
+           <Image source={ avijozi25_logo}  style={styles.bannerImage}  resizeMode="cover"/>
 
             {/* Profile Picture Overlay */}
             <View style={styles.profileImageContainer}>
@@ -74,7 +74,7 @@ export default function ProfileScreen() {
                 />
                 <View style={styles.buttonContainer}>
                     <TouchableOpacity style={[styles.editProfileButton, { backgroundColor: currentColors.primaryButton }]} >
-                        <Text style={styles.editProfileButtonText}>Share profile</Text>
+                        <Text style={styles.textSecondary}>Share profile</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
                         style={[styles.editProfileButton, {backgroundColor: currentColors.secondaryButton}]} 
@@ -88,9 +88,11 @@ export default function ProfileScreen() {
             <ScrollView style={styles.contentContainer} contentContainerStyle={{ paddingBottom: 60 }}>
                 {/* User Info Section */}
                 <View style={[styles.userInfoContainer, { backgroundColor: currentColors.cardBackground, borderColor: currentColors.secondaryButton }]}>
-                    <Text style={[styles.userName, {color: currentColors.textPrimary}]}>{profile?.full_name || "Unnamed"}</Text>
+  
+    
+                    <Text style={[styles.userName, {color: currentColors.textThird}]}>{profile?.full_name || "Unnamed"}</Text>
                     <Text style={[styles.userHandle, {color: currentColors.textSecondary}]}>@thabo_animator</Text>
-                    <Text style={[styles.userBio, {color: currentColors.textPrimary}]}>
+                    <Text style={[styles.userBio, {color: currentColors.textThird}]}>
                         I don't know if this section is necessary
                     </Text>
 
@@ -184,8 +186,9 @@ const styles = StyleSheet.create({
         zIndex: 10,
     },
     bannerImage: {
-        width: width,
-        height: 150,
+       // width: width,
+       width:'100%',
+        height: 70,
     },
     profileImageContainer: {
         paddingHorizontal: 20,
@@ -231,9 +234,9 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         borderBottomLeftRadius: 12,
         borderBottomRightRadius: 12,
-        borderBottomWidth: 3,
-        borderRightWidth: 3,
-        borderLeftWidth: 3,
+       // borderBottomWidth: 3,
+       // borderRightWidth: 3,
+       // borderLeftWidth: 3,
         padding: 20,
     },
     userName: {
@@ -272,7 +275,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         padding: 16,
         marginBottom: 16,
-        borderWidth: 3,
+        borderWidth: 1,
     },
     sectionTitle: {
         fontSize: 18,

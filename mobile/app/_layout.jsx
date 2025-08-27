@@ -19,7 +19,9 @@ export default function RootLayout() {
     return () => clearTimeout(timeout);
   }, []);
 
-  if (showSplash) return <SplashScreen />;
+  if (showSplash) return <ThemeProvider>
+        <SplashScreen />
+      </ThemeProvider>;
 
   return (
     <AuthContextProvider>

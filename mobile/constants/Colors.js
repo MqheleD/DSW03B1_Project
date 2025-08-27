@@ -4,8 +4,9 @@ export const Colors = {
     cardBackground: '#FFFFFF',
     textPrimary: '#1A202C',
     textSecondary: '#718096',
+     textThird:"#718096",
     buttonBackground: '#3182CE',
-    buttonText: '#FFFFFF',
+    buttonText: 'black',
     borderColor: '#E2E8F0',
     removeButton: '#E53E3E',
     toggleBackground: '#CBD5E0',
@@ -17,12 +18,17 @@ export const Colors = {
     logoutButtonBackground: '#E53E3E',
     primaryButton: "#F0385B", // AVIJOZI F0385B Blue 3b82f6
     secondaryButton: "#FF8BA1", // AVIJOZI FF8BA1 Blue 93c5fd
+     iconbackground:'#dcd9d9ff',
+
+     nextEvent:"#F0385B",
+     
   },
   dark: {
     background: '#111111',
     cardBackground: '#777777',
     textPrimary: '#E2E8F0',
     textSecondary: '#333333',
+    textThird:"#333333",
     buttonBackground: '#3182CE',
     buttonText: '#FFFFFF',
     borderColor: '#4A5568',
@@ -36,12 +42,17 @@ export const Colors = {
     logoutButtonBackground: '#E53E3E',
     primaryButton: "#F0385B", // AVIJOZI F0385B Blue 3b82f6
     secondaryButton: "#FF8BA1", // AVIJOZI FF8BA1 Blue 93c5fd
+    iconbackground:'#efefefff',
+
+     nextEvent:"#F0385B",
   },
-  zee_light: {
-     background: 'white', 
-  cardBackground: '#e6e6e6ff', 
+
+   zee_light:{
+  
+  background: '#f7e6e8ff', 
+  cardBackground: 'white', 
   textPrimary: '#1A202C', 
-  textSecondary: '#4A5568', 
+  textSecondary: '#F0385B', 
   buttonText: 'black', 
 
   borderColor: '#CBD5E0', 
@@ -56,40 +67,43 @@ export const Colors = {
   logoutButtonBackground: '#E53E3E', 
 
   primaryButton: '#2b3240ff', 
-  secondaryButton: '#5fccffff', 
+  secondaryButton: '#1DBEC4', 
 
 
   //for complex styling purposes
-  nextEvent:"#3AD6BD",
-  shadows:"#1DBEC4",
+  nextEvent:"#F0385B",
+  shadows:"#FF8BA1",
   myEvents:"black",
-  iconbackground:'white'
+  iconbackground:'#cff6f7ff'
+
+
   },
-  zee_dark: {
-    background: '#181818',
-    cardBackground: 'white',
-    textPrimary: 'black',
-    textSecondary: '#333333',
+  zee_dark:{
+    background: 'white',
+    cardBackground: '#e1ddddff',
+    textPrimary: '#606b7cff',
+    textSecondary: '#1DBEC4',
+    textThird:"black",
     //buttonBackground: '#3182CE',
-    buttonText: 'white',
+    buttonText: '#F0385B',
     borderColor: '#4A5568',
     removeButton: '#E53E3E',
     toggleBackground: '#3182CE',
     inputBackground: '#4A5568',
-    navBarBackground: '#333333',
+    navBarBackground: '#d0d2d2ff',
     navBorderColor: '#4A5568',
     socialLinkBackground: '#4A5568',
     changePhotoButtonBackground: '#3182CE',
     logoutButtonBackground: '#E53E3E',
-    primaryButton: "black", // AVIJOZI F0385B Blue 3b82f6
-    secondaryButton: "white", // AVIJOZI FF8BA1 Blue 93c5fd
+    primaryButton: "#b2a9aaff", 
+    secondaryButton: "black", 
 
 
 
 
-  nextEvent:"#61fce2ff",
-  shadows:"#71f4f9ff",
+  nextEvent:"#15dcbbff",
+  shadows:"#5df3f9ff",
   myEvents:"white",
   iconbackground:'#efefefff'
-  },
+  }
 };

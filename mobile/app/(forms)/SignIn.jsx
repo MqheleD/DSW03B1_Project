@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,12 +9,14 @@ import {
   Platform,
   ScrollView,
   Alert,
+   Image,
 } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import supabase from '../supabaseClient';
 import { UserAuth } from '@/hooks/AuthContext';
+import * as Asset from 'expo-asset';
 
 export default function Signin() {
   const [open, setOpen] = useState(false);
@@ -181,6 +183,19 @@ const { session, signUpNewUser, updateProfile } = UserAuth();
 //     Alert.alert('Signup failed', error.message || 'An unexpected error occurred.');
 //   }
 // };
+
+
+ useEffect(() => {
+  async function preloadImages() {
+    await Asset.fromModule(require('../../assets/images/Drones (00000)111.png')).downloadAsync();
+    
+  }
+  preloadImages();
+}, []);
+const [imageLoaded, setImageLoaded] = useState(false);
+const env_master_ = require('../../assets/images/../../assets/images/Drones (00000)111.png');
+
+
 
 const handleSignup = async () => {
   if (password !== confirmPassword) {
@@ -424,13 +439,21 @@ const handleSignup = async () => {
                 <TouchableOpacity onPress={() => router.navigate('/(forms)/Login')}>
                   <Text style={styles.linkText}>Login?</Text>
                 </TouchableOpacity>
+                
               </View>
+              
             </>
           )}
         </View>
+          
       </ScrollView>
+    {/*<View style={styles.imageSize}>*/}
+        <Image source={env_master_} style={styles.image} />       
+      {/*</View>*/}
+     
     </KeyboardAvoidingView>
   );
+  
 }
 
 const styles = StyleSheet.create({
@@ -443,17 +466,17 @@ const styles = StyleSheet.create({
     paddingTop: 5,
     paddingBottom: 50,
   },
-  Heading: {
-    color: "#95B2CA",
-    fontWeight: 'bold',
-    fontSize: 25,
-    marginBottom: 40,
-    textShadowColor: '#112250',
-    textShadowOffset: { width: 2, height: 1 },
-    textShadowRadius: 2,
-    elevation: 2,
-    overflow: 'visible',
-  },
+   Heading: {
+  color: 'white',
+  fontWeight: 'bold',
+  fontSize: 25,
+  textShadowColor: '#D10023',
+  textShadowOffset: { width: 2, height: 1 },
+  textShadowRadius: 2,
+   marginBottom: 40,
+   paddingTop:0,
+   
+},
   inputfield: {
     flex: 1,
     alignSelf: 'flex-start',
@@ -466,19 +489,19 @@ const styles = StyleSheet.create({
     elevation: 2
   },
   linkText: {
-    color: 'black',
+    color: '#f08fa1ff', 
     textDecorationLine: 'underline',
     fontSize: 16,
   },
   SignupDesign: {
-    backgroundColor: "#003459",
-    width: "100%",
-    height: "50%",
-    alignItems: "center",
-    borderBottomRightRadius: "10%",
-    borderBottomLeftRadius: "20%",
-    paddingTop: "30%",
-    elevation: 2
+    backgroundColor: '#E34664', 
+    width: '100%',
+    height: '60%',
+    alignItems: 'center',
+    borderBottomRightRadius: '10%',
+    borderBottomLeftRadius: '10%',
+    paddingTop: '20%',
+    elevation: 2,
   },
   inputContainer: {
     width: '92%',
@@ -503,4 +526,16 @@ const styles = StyleSheet.create({
   eyeIcon: {
     paddingHorizontal: 8,
   },
+  image: {
+    width: 500,
+    height: 450,
+    resizeMode: "contain", 
+   
+  },
+  imageSize:{
+       marginLeft:0,
+        width: '100%', 
+        height:'32%', 
+       //lignItems:'center' 
+  }
 });

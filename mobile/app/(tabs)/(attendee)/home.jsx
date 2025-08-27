@@ -254,10 +254,10 @@ export default function Home() {
             style={[styles.actionButton, { backgroundColor: currentColors.cardBackground }]}
             onPress={() => router.push("/(screens)/Scanner")}
           >
-            <View style={[styles.actionIconCircle, { backgroundColor: "#dbeafe" }]}>
+            <View style={[styles.actionIconCircle, { backgroundColor:currentColors.iconbackground}]}>
               <FontAwesome5 name="qrcode" size={20} color="#2563eb" />
             </View>
-            <Text style={[styles.actionText, { color: currentColors.textSecondary }]}>
+            <Text style={[styles.actionText, { color: currentColors.textThird }]}>
               Scan QR Code
             </Text>
           </TouchableOpacity>
@@ -265,10 +265,10 @@ export default function Home() {
             style={[styles.actionButton, { backgroundColor: currentColors.cardBackground }]}
             onPress={() => router.push("/(screens)/ShareDetails")}
           >
-            <View style={[styles.actionIconCircle, { backgroundColor: "#ede9fe" }]}>
+            <View style={[styles.actionIconCircle, { backgroundColor:currentColors.iconbackground }]}>
               <FontAwesome5 name="share-alt" size={20} color="#7c3aed" />
             </View>
-            <Text style={[styles.actionText, { color: currentColors.textSecondary }]}>
+            <Text style={[styles.actionText, { color: currentColors.textThird }]}>
               Share Details
             </Text>
           </TouchableOpacity>
@@ -276,7 +276,7 @@ export default function Home() {
 
         {/* Upcoming Event Banner */}
         {eventsData.Today.length > 0 && (
-          <View style={[styles.upcomingEvent, { backgroundColor: currentColors.primaryButton }]}>
+          <View style={[styles.upcomingEvent, { backgroundColor: currentColors.nextEvent}]}>
             <View style={styles.upcomingEventTop}>
               <View>
                 <Text style={styles.nextEventLabel}>NEXT EVENT</Text>
@@ -292,10 +292,10 @@ export default function Home() {
               </View>
             </View>
             <TouchableOpacity
-              style={[styles.joinButton, { backgroundColor: currentColors.secondaryButton }]}
+              style={[styles.joinButton, { backgroundColor: currentColors.background }]}
               onPress={() => router.push("/(screens)/Scanner")}
             >
-              <Text style={[styles.joinButtonText, { color: currentColors.textPrimary }]}>Check In</Text>
+              <Text style={[styles.joinButtonText, { color: currentColors.buttonText }]}>Check In</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -320,7 +320,7 @@ export default function Home() {
                 <Text
                   style={[
                     { color: currentColors.textSecondary, fontWeight: "500" },
-                    selectedTab === tab && { color: "white" },
+                    selectedTab === tab && { color: currentColors.textThird },
                   ]}
                 >
                   {tab}

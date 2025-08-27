@@ -5,14 +5,20 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  Image,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+import { Asset } from 'expo-asset';
+import { useEffect } from 'react';
 
 import { ThemeContext } from "@/hooks/ThemeContext";
 
 const App = () => {
   const [selectedDay, setSelectedDay] = useState("Today");
   const [activeTab, setActiveTab] = useState("Upcoming");
+  const speakerChar = require('../../../assets/images/Speakerchar.png');
 
   const { currentColors } = useContext(ThemeContext);
 
@@ -59,6 +65,15 @@ const App = () => {
       },
     ],
   };
+
+
+  //for image to load faster
+ useEffect(() => {
+  async function preloadImages() {
+    await Asset.fromModule(require('../../../assets/images/Speakerchar.png')).downloadAsync();
+  }
+  preloadImages();
+}, []);
 
   // 🧠 This function filters events based on day + tab
   const getFilteredEvents = () => {
@@ -138,7 +153,7 @@ const App = () => {
                 styles.dayButton,
                 selectedDay === day && [
                   styles.selectedDayButton,
-                  { backgroundColor: currentColors.primaryButton },
+                  { backgroundColor: currentColors.textSecondary},
                 ],
               ]}
               onPress={() => setSelectedDay(day)}
@@ -169,7 +184,7 @@ const App = () => {
                 <Text
                   style={[
                     styles.eventTitle,
-                    { color: currentColors.textPrimary },
+                    { color: currentColors.textThird },
                   ]}
                 >
                   {event.title}
@@ -197,6 +212,10 @@ const App = () => {
               <Text style={styles.noEventsText}>No events scheduled</Text>
             </View>
           )}
+          <View style={{width:"100%",alignItems:'center'}}>
+                <Image source={speakerChar} style={styles.image} />
+          </View>
+         
         </ScrollView>
       </View>
     </SafeAreaView>
@@ -239,7 +258,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   selectedDayButtonText: {
-    color: "#FFF",
+    color: "black",
   },
   tabSelector: {
     flexDirection: "row",
@@ -290,6 +309,12 @@ const styles = StyleSheet.create({
   noEventsText: {
     fontSize: 18,
     color: "#777",
+  },
+  image: {
+    width: 200,
+    height: 150,
+    resizeMode: "contain", 
+   
   },
 });
 

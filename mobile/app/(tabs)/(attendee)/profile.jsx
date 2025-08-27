@@ -74,7 +74,7 @@ export default function ProfileScreen() {
                 />
                 <View style={styles.buttonContainer}>
                     <TouchableOpacity style={[styles.editProfileButton, { backgroundColor: currentColors.primaryButton }]} >
-                        <Text style={styles.editProfileButtonText}>Share profile</Text>
+                        <Text style={[styles.editProfileButtonText,{color:currentColors.buttonText}]}>Share profile</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
                         style={[styles.editProfileButton, {backgroundColor: currentColors.secondaryButton}]} 
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     },
     editProfileButtonText: {
         fontWeight: 'bold',
-        color: 'white',
+       // color: 'white',
     },
     contentContainer: {
         flex: 1,
@@ -235,9 +235,9 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         borderBottomLeftRadius: 12,
         borderBottomRightRadius: 12,
-        borderBottomWidth: 3,
-        borderRightWidth: 3,
-        borderLeftWidth: 3,
+        borderBottomWidth: 1,
+        borderRightWidth: 1,
+        borderLeftWidth: 1,
         padding: 20,
     },
     userName: {

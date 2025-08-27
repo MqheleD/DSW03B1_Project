@@ -284,8 +284,8 @@ const Schedule = () => {
                 styles.filterPill,
                 { 
                   backgroundColor: selectedDay === day 
-                    ? currentColors.primaryButton 
-                    : currentColors.secondaryButton,
+                    ? currentColors.secondaryButton
+                    : currentColors.primaryButton,
                   marginRight: 8
                 }
               ]}
@@ -323,8 +323,8 @@ const Schedule = () => {
                 styles.filterPill,
                 { 
                   backgroundColor: (activeTab === filter || filterRoom === filter)
-                    ? currentColors.primaryButton 
-                    : currentColors.secondaryButton,
+                    ? currentColors.secondaryButton
+                    : currentColors.primaryButton ,
                   marginRight: 8
                 }
               ]}

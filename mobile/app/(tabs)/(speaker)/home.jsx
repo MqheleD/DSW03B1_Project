@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext,useRef } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   StyleSheet,
   StatusBar,
   ActivityIndicator,
+  Animated, 
+  Easing
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
@@ -16,8 +18,18 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import StorySwiper from "../../../components/StorySwiper";
 import { ThemeContext } from "@/hooks/ThemeContext";
 import { UserAuth } from "@/hooks/AuthContext";
-import { router } from "expo-router";
+import { router,useRouter } from "expo-router";
+
 import supabase from "@/app/supabaseClient";
+import * as Animatable from 'react-native-animatable';
+
+
+
+
+import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system";
+
+
 
 export default function Home() {
   const [eventsData, setEventsData] = useState({ Today: [], Tomorrow: [] });
@@ -27,11 +39,36 @@ export default function Home() {
   const { currentColors, isDarkMode } = useContext(ThemeContext);
   const { profile, loading } = UserAuth();
 
+  const route = useRouter();
+
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     fetchEvents();
     return () => clearInterval(timer);
   }, []);
+
+
+
+const bounceAnim = useRef(new Animated.Value(0)).current;
+
+   useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(bounceAnim, {
+          toValue: -10, // move UP by 10px
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(bounceAnim, {
+          toValue: 0, // back DOWN
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, [bounceAnim]);
+
+
 
 const fetchEvents = async () => {
   try {
@@ -206,61 +243,82 @@ const fetchEvents = async () => {
           </View>
         </View>
 
-        <View style={{ height: 200, marginTop: 16 }}>  
-  <StorySwiper />
-</View>
+          
+  
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: currentColors.cardBackground }]}
-            onPress={() => router.push("/(screens)/Scanner")}
-          >
-            <View style={[styles.actionIconCircle, { backgroundColor: "#dbeafe" }]}>
-              <FontAwesome5 name="qrcode" size={20} color="#2563eb" />
-            </View>
-            <Text style={[styles.actionText, { color: currentColors.textSecondary }]}>
-              Scan QR Code
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: currentColors.cardBackground }]}
-            onPress={() => router.push("/(screens)/ShareDetails")}
-          >
-            <View style={[styles.actionIconCircle, { backgroundColor: "#ede9fe" }]}>
-              <FontAwesome5 name="share-alt" size={20} color="#7c3aed" />
-            </View>
-            <Text style={[styles.actionText, { color: currentColors.textSecondary }]}>
-              Share Details
-            </Text>
-          </TouchableOpacity>
-        </View>
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: currentColors.cardBackground }]}
+                  onPress={() => router.push("/(screens)/Scanner")}
+                >
+                  <View style={[styles.actionIconCircle, { backgroundColor: currentColors.iconbackground }]}>
+                    <FontAwesome5 name="qrcode" size={20} color="#2563eb" />
+                  </View>
+                  <Text style={[styles.actionText, { color: currentColors.textThird }]}>Scan QR Code</Text>
+                </TouchableOpacity>
+      
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: currentColors.cardBackground }]}
+                  onPress={() => router.push("/(screens)/ShareDetails")}
+                >
+                  <View style={[styles.actionIconCircle, {backgroundColor: currentColors.iconbackground }]}>
+                    <FontAwesome5 name="share-alt" size={20} color="#7c3aed" />
+                  </View>
+                  <Text style={[styles.actionText, { color: currentColors.textThird }]}>Share Details</Text>
+                </TouchableOpacity>
+              </View>
 
         {/* Upcoming Event Banner */}
-        {eventsData.Today.length > 0 && (
-          <View style={[styles.upcomingEvent, { backgroundColor: currentColors.primaryButton }]}>
-            <View style={styles.upcomingEventTop}>
-              <View>
-                <Text style={styles.nextEventLabel}>NEXT EVENT</Text>
-                <Text style={styles.nextEventTitle}>{eventsData.Today[0].title}</Text>
-                <View style={styles.upcomingEventRow}>
-                  <FontAwesome5 name="clock" size={12} color="rgba(255,255,255,0.8)" style={{ marginRight: 4 }} />
-                  <Text style={styles.upcomingEventText}>{eventsData.Today[0].time}</Text>
-                </View>
-                <View style={styles.upcomingEventRow}>
-                  <FontAwesome5 name="map-marker-alt" size={12} color="rgba(255,255,255,0.8)" style={{ marginRight: 4 }} />
-                  <Text style={styles.upcomingEventText}>{eventsData.Today[0].location}</Text>
-                </View>
-              </View>
-            </View>
-            <TouchableOpacity
-              style={[styles.joinButton, { backgroundColor: currentColors.secondaryButton }]}
-              onPress={() => router.push("/(screens)/Scanner")}
-            >
-              <Text style={[styles.joinButtonText, { color: currentColors.textPrimary }]}>Check In</Text>
-            </TouchableOpacity>
+
+    {eventsData.Today.length > 0 && (
+  <Animatable.View
+    animation="jello"
+    iterationCount="infinite"
+    duration={2000}
+    style={[
+      styles.upcomingEvent,
+      {
+        backgroundColor: currentColors.nextEvent,
+        shadowColor: currentColors.shadows,
+        shadowOffset: { width: 5, height: 5 },
+        shadowOpacity: 0.65,
+        shadowRadius: 3.84,
+        elevation: 5,
+      },
+    ]}
+  >
+    {/* Use the first event dynamically */}
+    {eventsData.Today[0] && (
+      <View style={styles.upcomingEventTop}>
+        <View>
+          <Text style={styles.nextEventLabel}>NEXT EVENT</Text>
+          <Text style={[styles.nextEventTitle]}>{eventsData.Today[0].title}</Text>
+          <View style={styles.upcomingEventRow}>
+            <FontAwesome5
+              name="map-marker-alt"
+              size={12}
+              color="black"
+              style={{ marginRight: 4 }}
+            />
+            <Text style={styles.upcomingEventText}>
+              {eventsData.Today[0].location}
+            </Text>
           </View>
-        )}
+        </View>
+      </View>
+    )}
+
+    <TouchableOpacity
+      style={[styles.joinButton, { backgroundColor: currentColors.background }]}
+      onPress={() => router.push("/(screens)/Scanner")}
+    >
+      <Text style={[styles.joinButtonText, { color: currentColors.buttonText }]}>
+        Check In
+      </Text>
+    </TouchableOpacity>
+  </Animatable.View>
+)}
 
         {/* My Events */}
         <View style={{ marginTop: 24 }}>
@@ -269,7 +327,7 @@ const fetchEvents = async () => {
           </Text>
 
           {/* Tab Switcher */}
-          <View style={[styles.tabSwitcher, { backgroundColor: currentColors.secondaryButton }]}>
+          <View style={[styles.tabSwitcher, { backgroundColor: currentColors.cardBackground }]}>
             {["Today", "Tomorrow"].map((tab) => (
               <TouchableOpacity
                 key={tab}
@@ -281,8 +339,8 @@ const fetchEvents = async () => {
               >
                 <Text
                   style={[
-                    { color: currentColors.textSecondary, fontWeight: "500" },
-                    selectedTab === tab && { color: "white" },
+                    { color: currentColors.textThird, fontWeight: "500" },
+                    selectedTab === tab && { color: currentColors.textThird },
                   ]}
                 >
                   {tab}
@@ -321,7 +379,7 @@ const fetchEvents = async () => {
                     <View style={{ flexDirection: "row", alignItems: "center" }}>
                       <View style={[styles.eventColorBar, { backgroundColor: event.color }]} />
                       <View>
-                        <Text style={[styles.eventTitle, { color: currentColors.textPrimary }]}>{event.title}</Text>
+                        <Text style={[styles.eventTitle, { color: currentColors.textThird }]}>{event.title}</Text>
                         <View style={styles.eventTimeRow}>
                           <FontAwesome5
                             name="clock"
@@ -354,6 +412,9 @@ const fetchEvents = async () => {
               ))
             )}
           </View>
+        </View>
+        <View>
+             
         </View>
       </ScrollView>
     </SafeAreaView>

@@ -256,7 +256,7 @@ export default function Settings() {
             </View>
             <TouchableOpacity
               onPress={pickImage}
-              style={[styles.changePhotoButton, { backgroundColor: currentColors.primaryButton }]}
+              style={[styles.changePhotoButton, { backgroundColor: currentColors.secondaryButton}]}
               activeOpacity={0.7}
               disabled={uploading}
             >
@@ -286,7 +286,7 @@ export default function Settings() {
                 keyboardType="url"
               />
               <TouchableOpacity
-                style={[styles.addButton, { backgroundColor: currentColors.primaryButton }]}
+                style={[styles.addButton, { backgroundColor: currentColors.secondaryButton }]}
                 onPress={handleAddSocialLink}
                 activeOpacity={0.7}
               >
@@ -330,7 +330,7 @@ export default function Settings() {
             </Text>
 
             <TouchableOpacity
-              style={[styles.themeButton, { backgroundColor: currentColors.primaryButton }]}
+              style={[styles.themeButton, { backgroundColor: currentColors.secondaryButton }]}
               onPress={() => setIsThemeModalVisible(true)}
               activeOpacity={0.7}
             >

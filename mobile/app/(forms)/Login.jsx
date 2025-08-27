@@ -10,20 +10,37 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { supabase } from "../supabaseClient";
 import { UserAuth } from '@/hooks/AuthContext';
+import * as Font from 'expo-font';
+import * as Asset from 'expo-asset';
+
+//assets\images\avijozi_cover2-removebg-preview.png
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
-  
+   
 
   const { profile, session, signInUser } = UserAuth();
+
+
+ //for image to load faster
+ useEffect(() => {
+  async function preloadImages() {
+    await Asset.fromModule(require('../../assets/images/Boom2.png')).downloadAsync();
+    
+  }
+  preloadImages();
+}, []);
+const [imageLoaded, setImageLoaded] = useState(false);
+const Boom2 = require('../../assets/images/Boom2.png');
 
   useEffect(() => {
     if (session && profile?.role) {
@@ -81,7 +98,14 @@ const handleLogin = async () => {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.SignupDesign}>
-          <Text style={styles.Heading}>LOGIN</Text>
+        
+      <View style={styles.rowContainer}>
+  <Image source={Boom2} style={styles.image} />
+</View>
+ <View style={styles.headingContainer}>
+    <Text style={styles.Heading}>LOGIN</Text>
+  </View>
+
           <View style={styles.inputContainer}>
             <Text style={{ color: 'red' }}>{emailError}</Text>
             <TextInput
@@ -136,10 +160,11 @@ const handleLogin = async () => {
   );
 }
 
-const styles = StyleSheet.create({
+
+  const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#fff', 
   },
   scrollContainer: {
     flexGrow: 1,
@@ -148,25 +173,26 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   SignupDesign: {
-    backgroundColor: '#003459',
+    backgroundColor: '#E34664', 
     width: '100%',
     height: '60%',
     alignItems: 'center',
     borderBottomRightRadius: '10%',
     borderBottomLeftRadius: '10%',
-    paddingTop: '50%',
+    paddingTop: '20%',
     elevation: 2,
   },
   Heading: {
-    color: '#95B2CA',
-    fontWeight: 'bold',
-    fontSize: 25,
-    marginBottom: 40,
-    textShadowColor: '#112250',
-    textShadowOffset: { width: 2, height: 1 },
-    textShadowRadius: 2,
-    elevation: 2,
-  },
+  color: 'white',
+  fontWeight: 'bold',
+  fontSize: 25,
+  textShadowColor: '#D10023',
+  textShadowOffset: { width: 2, height: 1 },
+  textShadowRadius: 2,
+   marginTop: 0,
+   paddingTop:0,
+   
+},
   inputContainer: {
     width: '92%',
     backgroundColor: '#F3F3F3',
@@ -201,10 +227,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   linkText: {
-    color: 'black',
+    color: '#f08fa1ff', 
     textDecorationLine: 'underline',
     fontSize: 16,
-    marginRight:14
+    marginRight: 14,
+   
   },
   buttonWrapper: {
     width: '100%',
@@ -213,11 +240,36 @@ const styles = StyleSheet.create({
     paddingRight: '5%',
   },
   loginButton: {
-    backgroundColor: 'black',
+    backgroundColor: '#000000', 
     borderRadius: 20,
     padding: 5,
     elevation: 2,
     alignItems: 'center',
     justifyContent: 'center',
+
   },
+  image: {
+    width: 200,
+    height: 150,
+    resizeMode: "contain", 
+   
+  },
+rowContainer: {
+  flexDirection: 'row',
+  
+  justifyContent: 'flex-start', 
+ width: '53%', 
+ height:'21%',            
+  marginTop: 20,
+ 
+},
+headingContainer: {
+   
+  alignItems: 'center',   
+
+  marginBottom:'10%'       
+},
+
 });
+
+

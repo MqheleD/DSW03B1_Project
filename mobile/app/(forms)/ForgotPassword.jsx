@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   linkText: {
-    color: 'black',
+    color: '#f08fa1ff',
     textDecorationLine: 'underline',
     textAlign: 'center',
   },
