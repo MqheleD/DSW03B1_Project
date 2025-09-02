@@ -1,321 +1,253 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
-  ScrollView,
-  StyleSheet,
+  FlatList,
   Image,
-  ActivityIndicator,
+  StyleSheet,
+  Alert,
+  Modal,
+
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-import { Asset } from 'expo-asset';
-import { useEffect } from 'react';
-
+import supabase from "../../supabaseClient";
+import { WebView } from "react-native-webview";
 import { ThemeContext } from "@/hooks/ThemeContext";
+import { UserAuth } from "@/hooks/AuthContext";
+import { useIsFocused } from "@react-navigation/native";
 
-const App = () => {
-  const [selectedDay, setSelectedDay] = useState("Today");
-  const [activeTab, setActiveTab] = useState("Upcoming");
-  const speakerChar = require('../../../assets/images/Speakerchar.png');
-
+export default function App() {
   const { currentColors } = useContext(ThemeContext);
-
-  // Mock data for events
-  const events = {
-    Today: [
-      {
-        id: 1,
-        title: "Animation",
-        time: "09:00 - 10:30",
-        location: "Conference Room A",
-      },
-      {
-        id: 2,
-        title: "Film",
-        time: "13:00 - 14:00",
-        location: "Conference Room B",
-      },
-      {
-        id: 3,
-        title: "VFX",
-        time: "15:30 - 16:00",
-        location: "Conference Room C",
-      },
-    ],
-    Tomorrow: [
-      {
-        id: 4,
-        title: "Virtual Production",
-        time: "10:00 - 11:00",
-        location: "Innovation Lab",
-      },
-      {
-        id: 5,
-        title: "AI",
-        time: "12:30 PM - 1:30 PM",
-        location: "Bistro Garden",
-      },
-      {
-        id: 6,
-        title: "Interactive Technology",
-        time: "12:30 PM - 1:30 PM",
-        location: "Bistro Garden",
-      },
-    ],
-  };
-
-
-  //for image to load faster
- useEffect(() => {
-  async function preloadImages() {
-    await Asset.fromModule(require('../../../assets/images/Speakerchar.png')).downloadAsync();
-  }
-  preloadImages();
-}, []);
-
-  // 🧠 This function filters events based on day + tab
-  const getFilteredEvents = () => {
-    const dayEvents = events[selectedDay] || [];
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // reset time to midnight
-
-    const selectedDate = new Date();
-    if (selectedDay === "Tomorrow") {
-      selectedDate.setDate(today.getDate() + 1);
-    } else {
-      selectedDate.setDate(today.getDate());
-    }
-    selectedDate.setHours(0, 0, 0, 0); // also reset time
-
-    if (activeTab === "Upcoming") {
-      return selectedDate >= today ? dayEvents : [];
-    } else {
-      return selectedDate < today ? dayEvents : [];
+  const { profile } = UserAuth();
+  const [slides, setSlides] = useState([]);
+  const [selectedSlide, setSelectedSlide] = useState(null);
+  const Speakerchar = require('../../../assets/images/Speakerchar.png');
+  // Fetch slides
+  const fetchSlides = async () => {
+    try {
+      const { data, error } = await supabase.from("presentation_slides").select("*");
+      if (error) console.error("Error fetching slides:", error);
+      else setSlides(data || []);
+    } catch (err) {
+      console.error(err);
     }
   };
 
-  const filteredEvents = getFilteredEvents();
-  const hasEvents = filteredEvents.length > 0;
+
+  const isFocused = useIsFocused();
+//fetches the slides everytime they are uloaded 
+    useEffect(() => {
+    fetchSlides();
+  }, []);
+
+ 
+  useEffect(() => {
+    if (isFocused) {
+      fetchSlides();
+    }
+  }, [isFocused]);
+
+  const getViewerUrl = (url, type) => {
+    if (!url) return null;
+    if (
+      type ===
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+      url.toLowerCase().endsWith(".pptx")
+    ) {
+      return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(
+        url
+      )}`;
+    }
+    if (type === "application/pdf" || url.toLowerCase().endsWith(".pdf")) return url;
+    return url;
+  };
+
+  // Delete slide
+  const handleDelete = async (slide) => {
+    Alert.alert("Delete Slide", `Are you sure you want to delete "${slide.file_name}"?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const filePath = slide.file_url.split(
+              "/storage/v1/object/public/speaker-presentation-slides/"
+            )[1];
+            if (filePath) {
+              const { error: storageError } = await supabase.storage
+                .from("speaker-presentation-slides")
+                .remove([filePath]);
+              if (storageError) console.error("Storage delete error:", storageError);
+            }
+
+            const { error: dbError } = await supabase
+              .from("presentation_slides")
+              .delete()
+              .eq("id", slide.id);
+            if (dbError) console.error("DB delete error:", dbError);
+
+            setSlides((prev) => prev.filter((s) => s.id !== slide.id));
+          } catch (err) {
+            console.error("Delete error:", err);
+          }
+        },
+      },
+    ]);
+  };
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: currentColors.background }]}
-    >
-      <View
-        style={[
-          styles.container,
-          { backgroundColor: currentColors.background },
-        ]}
-      >
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: currentColors.background }]}>
+      <View style={styles.container}>
         <View style={styles.header}>
-          <Text
-            style={[styles.headerText, { color: currentColors.textPrimary }]}
-          >
-            Schedule
+          <Text style={[styles.headerText, { color: currentColors.textPrimary }]}>
+            Presentation Slides
           </Text>
         </View>
 
-        {/* Tab selector */}
-        <View style={styles.tabSelector}>
-          {["Upcoming", "Completed"].map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              style={[
-                styles.tabButton,
-                { backgroundColor: currentColors.cardBackground },
-                activeTab === tab && {
-                  backgroundColor: currentColors.secondaryButton,
-                },
-              ]}
-              onPress={() => setActiveTab(tab)}
-            >
-              <Text
-                style={[
-                  { color: currentColors.textPrimary },
-                  activeTab === tab && styles.activeTabButtonText,
-                ]}
+        <FlatList
+          data={slides}
+          keyExtractor={(item) => item.id?.toString()}
+          renderItem={({ item }) => {
+            return (
+              <TouchableOpacity
+                onPress={() => setSelectedSlide(item)}
+                style={[styles.slideCard, { backgroundColor: currentColors.cardBackground }]}
               >
-                {tab}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <View>
+                    <Text style={[styles.sessionName, { color: currentColors.textPrimary }]}>
+                      {item.session_name}
+                    </Text>
+                    <Text style={{ color: currentColors.textSecondary }}>
+                      {item.file_name}
+                    </Text>
+                  </View>
 
-        {/* Day selector */}
-        <View style={styles.daySelector}>
-          {["Today", "Tomorrow"].map((day) => (
-            <TouchableOpacity
-              key={day}
-              style={[
-                styles.dayButton,
-                selectedDay === day && [
-                  styles.selectedDayButton,
-                  { backgroundColor: currentColors.textSecondary},
-                ],
-              ]}
-              onPress={() => setSelectedDay(day)}
-            >
-              <Text
-                style={[
-                  styles.dayButtonText,
-                  selectedDay === day && styles.selectedDayButtonText,
-                ]}
-              >
-                {day}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+                  <TouchableOpacity
+                    onPress={() => handleDelete(item)}
+                    style={{ padding: 8, backgroundColor: "#ef4444", borderRadius: 6 }}
+                  >
+                    <Text style={{ color: "#fff" }}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            );
+          }}
+        />
+{selectedSlide && (
+  <Modal visible={true} animationType="slide" transparent={false}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#000" }}>
+      {/* Close Button */}
+      <View
+        style={{
+          padding: 12,
+          backgroundColor: "#111",
+          flexDirection: "row",
+          justifyContent: "flex-end",
+        }}
+      >
+        <TouchableOpacity
+          onPress={() => setSelectedSlide(null)}
+          style={{
+            paddingVertical: 8,
+            paddingHorizontal: 16,
+            backgroundColor: "#ef4444",
+            borderRadius: 8,
+          }}
+        >
+          <Text style={{ color: "#fff", fontWeight: "bold" }}>Close ✕</Text>
+        </TouchableOpacity>
+      </View>
 
-        {/* Events list */}
-        <ScrollView style={styles.scrollView}>
-          {hasEvents ? (
-            filteredEvents.map((event) => (
-              <View
-                key={event.id}
-                style={[
-                  styles.eventCard,
-                  { backgroundColor: currentColors.cardBackground },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.eventTitle,
-                    { color: currentColors.textThird },
-                  ]}
-                >
-                  {event.title}
-                </Text>
-                <Text
-                  style={[
-                    styles.eventDetail,
-                    { color: currentColors.textSecondary },
-                  ]}
-                >
-                  Time: {event.time}
-                </Text>
-                <Text
-                  style={[
-                    styles.eventDetail,
-                    { color: currentColors.textSecondary },
-                  ]}
-                >
-                  Location: {event.location}
-                </Text>
-              </View>
-            ))
-          ) : (
-            <View style={styles.noEvents}>
-              <Text style={styles.noEventsText}>No events scheduled</Text>
-            </View>
-          )}
-          <View style={{width:"100%",alignItems:'center'}}>
-                <Image source={speakerChar} style={styles.image} />
-          </View>
-         
-        </ScrollView>
+      {/* Slide content */}
+      <View style={{ flex: 1 }}>
+        {selectedSlide.file_type?.startsWith("image/") ? (
+          <Image
+            source={{ uri: selectedSlide.file_url }}
+            style={{ flex: 1, resizeMode: "contain" }}
+          />
+        ) : (
+          <WebView
+            source={{
+              uri: getViewerUrl(selectedSlide.file_url, selectedSlide.file_type),
+            }}
+            style={{ flex: 1 }}
+            originWhitelist={["*"]}
+            javaScriptEnabled
+            domStorageEnabled
+          />
+        )}
       </View>
     </SafeAreaView>
+  </Modal>
+)}
+
+
+      </View>
+     <View style={styles.ImageContainer}>
+          <Image source={Speakerchar} style={styles.image} />
+     </View>
+   
+    </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    // backgroundColor: "#F8F9FA"
+  safeArea: { flex: 1 },
+  container: { 
+    flex: 1, 
+    padding: 16 
   },
-  container: {
-    flex: 1,
-    // backgroundColor: "#F8F9FA",
-    padding: 16,
-  },
-  header: {
-    paddingVertical: 16,
-  },
-  headerText: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  daySelector: {
-    flexDirection: "row",
-    marginBottom: 16,
-  },
-  dayButton: {
-    padding: 10,
-    borderRadius: 20,
-    marginHorizontal: 5,
-    backgroundColor: "#E9ECEF",
-  },
-  selectedDayButton: {
-    backgroundColor: "#007BFF",
-  },
-  dayButtonText: {
-    color: "#333",
-    fontSize: 14,
-  },
-  selectedDayButtonText: {
-    color: "black",
-  },
-  tabSelector: {
-    flexDirection: "row",
-    marginBottom: 16,
-  },
-  tabButton: {
-    flex: 1,
-    padding: 10,
-    backgroundColor: "#FFF",
-    alignItems: "center",
-  },
-  activeTabButton: {
-    backgroundColor: "#EAF2FF",
-  },
-  tabButtonText: {
-    color: "#333",
-    fontSize: 14,
-  },
-  activeTabButtonText: {
-    color: "white",
-  },
-  scrollView: {
-    flex: 1,
-  },
-  eventCard: {
-    backgroundColor: "#FFF",
-    padding: 16,
-    marginBottom: 10,
-    borderRadius: 10,
-  },
-  eventTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  eventDetail: {
-    color: "#555",
-    marginTop: 5,
-  },
-  eventParticipants: {
-    color: "#777",
-    marginTop: 10,
-  },
-  noEvents: {
-    alignItems: "center",
-    padding: 20,
-  },
-  noEventsText: {
-    fontSize: 18,
-    color: "#777",
-  },
-  image: {
+    image: {
     width: 200,
     height: 150,
     resizeMode: "contain", 
    
   },
+  header: {
+     paddingVertical: 16 
+    },
+  headerText: { 
+    fontSize: 24, 
+    fontWeight: "bold" 
+  },
+  slideCard: {
+     marginBottom: 16,
+      padding: 12,
+       borderRadius: 8
+       },
+  sessionName: { 
+    fontWeight: "bold", 
+    fontSize: 16 
+  },
+  imagePreview: {
+     width: "100%",
+      height: 200, 
+      marginTop: 10,
+       borderRadius: 6
+       },
+  webView: {
+     width: "100%",
+     height: 500,
+      marginTop: 10,
+       borderRadius: 6 
+      },
+      ImageContainer:{
+        width: '53%', 
+         height:'27%',
+         alignItems:'center',
+         marginLeft:'20%'
+      }
 });
 
-export default App;
+
+
+

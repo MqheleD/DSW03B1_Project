@@ -18,7 +18,7 @@ export default function TabsLayout() {
           left: 20,
           right: 20,
           elevation: 10,
-          backgroundColor: currentColors.navBarBackground, // Use the card background color from the theme
+          backgroundColor: currentColors.navBarBackground, 
           borderRadius: 30,
           height: 70,
           shadowColor: "#000",
