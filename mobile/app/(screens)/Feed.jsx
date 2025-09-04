@@ -232,9 +232,7 @@ export default function Feed() {
   return (
     <View style={styles.container}>
       <Image
-        source={{
-          uri: `https://avijozi.zohobackstage.com/public/portals/880205061/siteResources/161390000000092631`,
-        }}
+        source={require('@/assets/images/header-image.png')} // or use a remote URI
         style={styles.bannerImage}
         resizeMode="contain"
       />
