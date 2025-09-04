@@ -51,19 +51,18 @@ export default function Home() {
   // Fetch events
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
-
+    
     const fetchAndSaveEvents = async () => {
       try {
         const localDate = new Date();
-        const todayStr = localDate.toISOString().split("T")[0];
+        const todayStr = localDate.toISOString().split('T')[0];
         const tomorrow = new Date(localDate);
         tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowStr = tomorrow.toISOString().split("T")[0];
+        const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
         const { data: todayEvents } = await supabase
-          .from("sessions")
-          .select(
-            `
+          .from('sessions')
+          .select(`
             id,
             title,
             description,
@@ -71,16 +70,14 @@ export default function Home() {
             end_time,
             room:room_id (room_name, location),
             speaker:speaker_id (full_name, photo_url)
-          `
-          )
-          .gte("start_time", `${todayStr}T00:00:00`)
-          .lte("start_time", `${todayStr}T23:59:59`)
-          .order("start_time", { ascending: true });
+          `)
+          .gte('start_time', `${todayStr}T00:00:00`)
+          .lte('start_time', `${todayStr}T23:59:59`)
+          .order('start_time', { ascending: true });
 
         const { data: tomorrowEvents } = await supabase
-          .from("sessions")
-          .select(
-            `
+          .from('sessions')
+          .select(`
             id,
             title,
             description,
@@ -88,20 +85,17 @@ export default function Home() {
             end_time,
             room:room_id (room_name, location),
             speaker:speaker_id (full_name, photo_url)
-          `
-          )
-          .gte("start_time", `${tomorrowStr}T00:00:00`)
-          .lte("start_time", `${tomorrowStr}T23:59:59`)
-          .order("start_time", { ascending: true });
+          `)
+          .gte('start_time', `${tomorrowStr}T00:00:00`)
+          .lte('start_time', `${tomorrowStr}T23:59:59`)
+          .order('start_time', { ascending: true });
 
         const formatTimeRange = (start, end) => {
-          const options = { hour: "2-digit", minute: "2-digit" };
-          return `${new Date(start).toLocaleTimeString([], options)} - ${new Date(
-            end
-          ).toLocaleTimeString([], options)}`;
+          const options = { hour: '2-digit', minute: '2-digit' };
+          return `${new Date(start).toLocaleTimeString([], options)} - ${new Date(end).toLocaleTimeString([], options)}`;
         };
 
-        const formatEvent = (event) => ({
+        const formattedTodayEvents = todayEvents?.map(event => ({
           id: event.id,
           title: event.title,
           time: formatTimeRange(event.start_time, event.end_time),
@@ -113,35 +107,47 @@ export default function Home() {
           speaker: event.speaker?.full_name || "TBD",
           speaker_full: event.speaker || { full_name: "TBD" },
           description: event.description,
-          image: event.speaker?.photo_url || "https://via.placeholder.com/150",
-        });
+          image: event.speaker?.photo_url || "https://via.placeholder.com/150"
+        })) || [];
+
+        const formattedTomorrowEvents = tomorrowEvents?.map(event => ({
+          id: event.id,
+          title: event.title,
+          time: formatTimeRange(event.start_time, event.end_time),
+          start_time: event.start_time,
+          end_time: event.end_time,
+          location: event.room?.room_name || "TBD",
+          room: { room_name: event.room?.room_name || "TBD" },
+          color: getRandomColor(),
+          speaker: event.speaker?.full_name || "TBD",
+          speaker_full: event.speaker || { full_name: "TBD" },
+          description: event.description,
+          image: event.speaker?.photo_url || "https://via.placeholder.com/150"
+        })) || [];
 
         setEventsData({
-          Today: todayEvents?.map(formatEvent) || [],
-          Tomorrow: tomorrowEvents?.map(formatEvent) || [],
+          Today: formattedTodayEvents,
+          Tomorrow: formattedTomorrowEvents
         });
 
         if (profile?.id) {
-          const allSessions = [
-            ...(todayEvents?.map(formatEvent) || []),
-            ...(tomorrowEvents?.map(formatEvent) || []),
-          ];
-          await AsyncStorage.setItem(
-            `sessions_${profile.id}`,
-            JSON.stringify(allSessions)
-          );
-
-          const existingDefault = await AsyncStorage.getItem("default_sessions");
+          const allSessions = [...formattedTodayEvents, ...formattedTomorrowEvents];
+          await AsyncStorage.setItem(`sessions_${profile.id}`, JSON.stringify(allSessions));
+          
+          // Also save to default key for first-time users
+          const existingDefault = await AsyncStorage.getItem('default_sessions');
           if (!existingDefault) {
-            await AsyncStorage.setItem(
-              "default_sessions",
-              JSON.stringify(allSessions)
-            );
+            await AsyncStorage.setItem('default_sessions', JSON.stringify(allSessions));
           }
         }
+
       } catch (error) {
         console.error("Error fetching events:", error);
-        setEventsData({ Today: [], Tomorrow: [], error: "Failed to load events" });
+        setEventsData({
+          Today: [],
+          Tomorrow: [],
+          error: "Failed to load events"
+        });
       } finally {
         setLoading(false);
       }
@@ -153,13 +159,18 @@ export default function Home() {
 
   const toggleFavorite = async (session) => {
     if (!profile?.id) return;
+    
     const key = `favorites_${profile.id}`;
     try {
-      const isFavorite = favorites.some((fav) => fav.id === session.id);
-      const updatedFavorites = isFavorite
-        ? favorites.filter((fav) => fav.id !== session.id)
-        : [...favorites, session];
-
+      const isFavorite = favorites.some(fav => fav.id === session.id);
+      let updatedFavorites;
+      
+      if (isFavorite) {
+        updatedFavorites = favorites.filter(fav => fav.id !== session.id);
+      } else {
+        updatedFavorites = [...favorites, session];
+      }
+      
       await AsyncStorage.setItem(key, JSON.stringify(updatedFavorites));
       setFavorites(updatedFavorites);
     } catch (error) {
@@ -180,16 +191,16 @@ export default function Home() {
 
   if (authLoading || loading) {
     return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: currentColors.background }]}
-      >
+      <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
         <ActivityIndicator size="large" color={currentColors.primaryButton} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: currentColors.background }]}
+    >
       <StatusBar style={isDarkMode ? "light" : "dark"} />
 
       {/* ✅ Notification debug (optional since RootLayout already handles banner) */}
@@ -200,12 +211,7 @@ export default function Home() {
       )}
 
       {/* Nav Bar */}
-      <View
-        style={[
-          styles.navBar,
-          { backgroundColor: currentColors.navBarBackground },
-        ]}
-      >
+      <View style={[styles.navBar, { backgroundColor: currentColors.navBarBackground }]}>
         <Text style={[styles.navTitle, { color: currentColors.textPrimary }]}>
           Home
         </Text>
@@ -228,7 +234,9 @@ export default function Home() {
           <View style={styles.profileImageWrapper}>
             <Image
               source={{
-                uri: profile?.avatar_url || "https://readdy.ai/api/search-image?query=professional%20portrait%20photo%20of%20a%20young%20woman%20with%20shoulder%20length%20brown%20hair%2C%20friendly%20smile%2C%20business%20casual%20attire%2C%20high%20quality%2C%20studio%20lighting%2C%20clean%20background%2C%20professional%20headshot&width=100&height=100&seq=1&orientation=squarish",
+                uri:
+                  profile?.avatar_url ||
+                  "https://readdy.ai/api/search-image?query=professional%20portrait%20photo%20of%20a%20young%20woman%20with%20shoulder%20length%20brown%20hair%2C%20friendly%20smile%2C%20business%20casual%20attire%2C%20high%20quality%2C%20studio%20lighting%2C%20clean%20background%2C%20professional%20headshot&width=100&height=100&seq=1&orientation=squarish",
               }}
               style={styles.profileImage}
             />
@@ -236,11 +244,21 @@ export default function Home() {
           </View>
           <View style={{ marginLeft: 12 }}>
             {profile ? (
-              <Text style={[styles.profileName, { color: currentColors.textPrimary }]}>
+              <Text
+                style={[
+                  styles.profileName,
+                  { color: currentColors.textPrimary },
+                ]}
+              >
                 Hello, {profile.full_name}!
               </Text>
             ) : (
-              <Text style={[styles.profileName, { color: currentColors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.profileName,
+                  { color: currentColors.textSecondary },
+                ]}
+              >
                 Hello, Guest!
               </Text>
             )}
@@ -248,31 +266,51 @@ export default function Home() {
           </View>
         </View>
 
-        <View style={{ height: 200, marginTop: 16 }}>  
+        <View style={{ height: 200, marginTop: 16 }}>
           <StorySwiper />
         </View>
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: currentColors.cardBackground }]}
+            style={[
+              styles.actionButton,
+              { backgroundColor: currentColors.cardBackground },
+            ]}
             onPress={() => router.push("/(screens)/Scanner")}
           >
-            <View style={[styles.actionIconCircle, { backgroundColor:currentColors.iconbackground}]}>
+            <View
+              style={[
+                styles.actionIconCircle,
+                { backgroundColor: currentColors.iconbackground },
+              ]}
+            >
               <FontAwesome5 name="qrcode" size={20} color="#2563eb" />
             </View>
-            <Text style={[styles.actionText, { color: currentColors.textThird }]}>
+            <Text
+              style={[styles.actionText, { color: currentColors.textThird }]}
+            >
               Scan QR Code
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: currentColors.cardBackground }]}
+            style={[
+              styles.actionButton,
+              { backgroundColor: currentColors.cardBackground },
+            ]}
             onPress={() => router.push("/(screens)/ShareDetails")}
           >
-            <View style={[styles.actionIconCircle, { backgroundColor:currentColors.iconbackground }]}>
+            <View
+              style={[
+                styles.actionIconCircle,
+                { backgroundColor: currentColors.iconbackground },
+              ]}
+            >
               <FontAwesome5 name="share-alt" size={20} color="#7c3aed" />
             </View>
-            <Text style={[styles.actionText, { color: currentColors.textThird }]}>
+            <Text
+              style={[styles.actionText, { color: currentColors.textThird }]}
+            >
               Share Details
             </Text>
           </TouchableOpacity>
@@ -280,18 +318,39 @@ export default function Home() {
 
         {/* Upcoming Event Banner */}
         {eventsData.Today.length > 0 && (
-          <View style={[styles.upcomingEvent, { backgroundColor: currentColors.nextEvent}]}>
+          <View
+            style={[
+              styles.upcomingEvent,
+              { backgroundColor: currentColors.nextEvent },
+            ]}
+          >
             <View style={styles.upcomingEventTop}>
               <View>
                 <Text style={styles.nextEventLabel}>NEXT EVENT</Text>
-                <Text style={styles.nextEventTitle}>{eventsData.Today[0].title}</Text>
+                <Text style={styles.nextEventTitle}>
+                  {eventsData.Today[0].title}
+                </Text>
                 <View style={styles.upcomingEventRow}>
-                  <FontAwesome5 name="clock" size={12} color="rgba(255,255,255,0.8)" style={{ marginRight: 4 }} />
-                  <Text style={styles.upcomingEventText}>{eventsData.Today[0].time}</Text>
+                  <FontAwesome5
+                    name="clock"
+                    size={12}
+                    color="rgba(255,255,255,0.8)"
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={styles.upcomingEventText}>
+                    {eventsData.Today[0].time}
+                  </Text>
                 </View>
                 <View style={styles.upcomingEventRow}>
-                  <FontAwesome5 name="map-marker-alt" size={12} color="rgba(255,255,255,0.8)" style={{ marginRight: 4 }} />
-                  <Text style={styles.upcomingEventText}>{eventsData.Today[0].location}</Text>
+                  <FontAwesome5
+                    name="map-marker-alt"
+                    size={12}
+                    color="rgba(255,255,255,0.8)"
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={styles.upcomingEventText}>
+                    {eventsData.Today[0].location}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -299,26 +358,42 @@ export default function Home() {
               style={[styles.joinButton, { backgroundColor: currentColors.background }]}
               onPress={() => router.push("/(screens)/ShareDetails")}
             >
-              <Text style={[styles.joinButtonText, { color: currentColors.buttonText }]}>Check In</Text>
+              <Text
+                style={[
+                  styles.joinButtonText,
+                  { color: currentColors.buttonText },
+                ]}
+              >
+                Check In
+              </Text>
             </TouchableOpacity>
           </View>
         )}
 
         {/* My Events */}
         <View style={{ marginTop: 24 }}>
-          <Text style={[styles.sectionTitle, { color: currentColors.textPrimary }]}>
+          <Text
+            style={[styles.sectionTitle, { color: currentColors.textPrimary }]}
+          >
             My Events
           </Text>
 
           {/* Tab Switcher */}
-          <View style={[styles.tabSwitcher, { backgroundColor: currentColors.secondaryButton }]}>
+          <View
+            style={[
+              styles.tabSwitcher,
+              { backgroundColor: currentColors.secondaryButton },
+            ]}
+          >
             {["Today", "Tomorrow"].map((tab) => (
               <TouchableOpacity
                 key={tab}
                 onPress={() => setSelectedTab(tab)}
                 style={[
                   styles.tabButton,
-                  selectedTab === tab && { backgroundColor: currentColors.primaryButton },
+                  selectedTab === tab && {
+                    backgroundColor: currentColors.primaryButton,
+                  },
                 ]}
               >
                 <Text
@@ -335,18 +410,45 @@ export default function Home() {
 
           {/* Event List */}
           <View style={{ marginTop: 16 }}>
-            {(!eventsData[selectedTab] || eventsData[selectedTab].length === 0) ? (
-              <Text style={{ color: currentColors.textSecondary, textAlign: "center", marginTop: "auto" }}>
+            {!eventsData[selectedTab] ||
+            eventsData[selectedTab].length === 0 ? (
+              <Text
+                style={{
+                  color: currentColors.textSecondary,
+                  textAlign: "center",
+                  marginTop: "auto",
+                }}
+              >
                 No event data for {selectedTab}
               </Text>
             ) : (
               eventsData[selectedTab].map((event) => (
-                <View key={event.id} style={[styles.eventCard, { backgroundColor: currentColors.cardBackground }]}>
+                <View
+                  key={event.id}
+                  style={[
+                    styles.eventCard,
+                    { backgroundColor: currentColors.cardBackground },
+                  ]}
+                >
                   <View style={styles.eventCardHeader}>
-                    <View style={{ flexDirection: "row", alignItems: "center" }}>
-                      <View style={[styles.eventColorBar, { backgroundColor: event.color }]} />
+                    <View
+                      style={{ flexDirection: "row", alignItems: "center" }}
+                    >
+                      <View
+                        style={[
+                          styles.eventColorBar,
+                          { backgroundColor: event.color },
+                        ]}
+                      />
                       <View>
-                        <Text style={[styles.eventTitle, { color: currentColors.textPrimary }]}>{event.title}</Text>
+                        <Text
+                          style={[
+                            styles.eventTitle,
+                            { color: currentColors.textPrimary },
+                          ]}
+                        >
+                          {event.title}
+                        </Text>
                         <View style={styles.eventTimeRow}>
                           <FontAwesome5
                             name="clock"
@@ -354,7 +456,12 @@ export default function Home() {
                             color={currentColors.textSecondary}
                             style={{ marginRight: 4 }}
                           />
-                          <Text style={[styles.eventTimeText, { color: currentColors.textSecondary }]}>
+                          <Text
+                            style={[
+                              styles.eventTimeText,
+                              { color: currentColors.textSecondary },
+                            ]}
+                          >
                             {event.time}
                           </Text>
                         </View>
@@ -362,17 +469,35 @@ export default function Home() {
                     </View>
 
                     <TouchableOpacity onPress={() => toggleFavorite(event)}>
-                      <FontAwesome5 
-                        name={favorites.some(fav => fav.id === event.id) ? "heart" : "heart-o"} 
-                        size={16} 
-                        color={favorites.some(fav => fav.id === event.id) ? "#ec4899" : currentColors.textSecondary} 
+                      <FontAwesome5
+                        name={
+                          favorites.some((fav) => fav.id === event.id)
+                            ? "heart"
+                            : "heart-o"
+                        }
+                        size={16}
+                        color={
+                          favorites.some((fav) => fav.id === event.id)
+                            ? "#ec4899"
+                            : currentColors.textSecondary
+                        }
                       />
                     </TouchableOpacity>
                   </View>
 
                   <View style={styles.eventLocationRow}>
-                    <FontAwesome5 name="map-marker-alt" size={12} color="#6b7280" style={{ marginRight: 4 }} />
-                    <Text style={[styles.eventLocationText, { color: currentColors.textSecondary }]}>
+                    <FontAwesome5
+                      name="map-marker-alt"
+                      size={12}
+                      color="#6b7280"
+                      style={{ marginRight: 4 }}
+                    />
+                    <Text
+                      style={[
+                        styles.eventLocationText,
+                        { color: currentColors.textSecondary },
+                      ]}
+                    >
                       {event.location}
                     </Text>
                   </View>
