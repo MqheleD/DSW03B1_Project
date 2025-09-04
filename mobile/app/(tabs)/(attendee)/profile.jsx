@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -8,23 +8,29 @@ import {
     TouchableOpacity,
     StatusBar,
     Dimensions,
-    ActivityIndicator
+    ActivityIndicator,
+    RefreshControl
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 import { ThemeContext } from "@/hooks/ThemeContext";
 import { UserAuth } from "@/hooks/AuthContext";
 import { router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
 export default function ProfileScreen() {
     const [expandedInterests, setExpandedInterests] = useState(true);
     const [expandedContact, setExpandedContact] = useState(true);
-    const { currentColors, isDarkMode } = useContext(ThemeContext);
+    const { currentColors } = useContext(ThemeContext);
     const { profile, loading, signOut } = UserAuth();
     const [interests, setInterests] = useState([]);
+
+    const [connectionCount, setConnectionCount] = useState(0);
+    const [eventCount, setEventCount] = useState(0);
+    const [activities, setActivities] = useState([]);
+    const [refreshing, setRefreshing] = useState(false);
 
     // Handle logout
     const handleLogout = async () => {
@@ -43,7 +49,58 @@ export default function ProfileScreen() {
         }
     }, [profile]);
 
-    const bannerColor = currentColors.secondaryButton.replace("#", "");
+    // Fetch stats + activities
+    const fetchStats = useCallback(async () => {
+        if (!profile?.id) return;
+
+        try {
+            let activityFeed = [];
+
+            // Connections
+            const storedConnections = await AsyncStorage.getItem(`network-${profile.id}`);
+            const parsedConnections = storedConnections ? JSON.parse(storedConnections) : [];
+            setConnectionCount(Array.isArray(parsedConnections) ? parsedConnections.length : 0);
+
+            if (Array.isArray(parsedConnections) && parsedConnections.length > 0) {
+                const lastConnection = parsedConnections[parsedConnections.length - 1];
+                activityFeed.push({
+                    type: "connection",
+                    text: `Connected with ${lastConnection.full_name || "a creative"}`,
+                    date: lastConnection.date || new Date().toISOString(),
+                });
+            }
+
+            // Events (favorites)
+            const storedSessions = await AsyncStorage.getItem(`favorites_${profile?.id}`);
+            const parsedSessions = storedSessions ? JSON.parse(storedSessions) : [];
+            setEventCount(Array.isArray(parsedSessions) ? parsedSessions.length : 0);
+
+            if (Array.isArray(parsedSessions) && parsedSessions.length > 0) {
+                const lastSession = parsedSessions[parsedSessions.length - 1];
+                activityFeed.push({
+                    type: "event",
+                    text: `Liked "${lastSession.title || "an event"}"`,
+                    date: lastSession.date || new Date().toISOString(),
+                });
+            }
+
+            // Sort latest first
+            activityFeed.sort((a, b) => new Date(b.date) - new Date(a.date));
+            setActivities(activityFeed);
+        } catch (err) {
+            console.log("Error fetching stats:", err);
+        }
+    }, [profile]);
+
+    useEffect(() => {
+        fetchStats();
+    }, [fetchStats]);
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await fetchStats();
+        setRefreshing(false);
+    };
 
     if (loading) {
         return (
@@ -74,7 +131,7 @@ export default function ProfileScreen() {
                 />
                 <View style={styles.buttonContainer}>
                     <TouchableOpacity style={[styles.editProfileButton, { backgroundColor: currentColors.primaryButton }]} >
-                        <Text style={[styles.editProfileButtonText,{color:currentColors.buttonText}]}>Share profile</Text>
+                        <Text style={[styles.editProfileButtonText,{color:currentColors.buttonText}]}>Profile</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
                         style={[styles.editProfileButton, {backgroundColor: currentColors.secondaryButton}]} 
@@ -85,23 +142,25 @@ export default function ProfileScreen() {
                 </View>
             </View>
 
-            <ScrollView style={styles.contentContainer} contentContainerStyle={{ paddingBottom: 60 }}>
+            <ScrollView 
+                style={styles.contentContainer} 
+                contentContainerStyle={{ paddingBottom: 60 }}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+                }
+            >
                 {/* User Info Section */}
                 <View style={[styles.userInfoContainer, { backgroundColor: currentColors.cardBackground, borderColor: currentColors.secondaryButton }]}>
                     <Text style={[styles.userName, {color: currentColors.textPrimary}]}>{profile?.full_name || "Unnamed"}</Text>
-                    <Text style={[styles.userHandle, {color: currentColors.textSecondary}]}>@thabo_animator</Text>
-                    <Text style={[styles.userBio, {color: currentColors.textPrimary}]}>
-                        I don't know if this section is necessary
-                    </Text>
 
                     <View style={styles.userStats}>
                         <View style={styles.statItem}>
-                            <Text style={styles.statNumber}>142</Text>
+                            <Text style={styles.statNumber}>{connectionCount}</Text>
                             <Text style={[styles.statLabel, {color: currentColors.textSecondary}]}>Connections</Text>
                         </View>
  
                         <View style={styles.statItem}>
-                            <Text style={styles.statNumber}>24</Text>
+                            <Text style={styles.statNumber}>{eventCount}</Text>
                             <Text style={[styles.statLabel, {color: currentColors.textSecondary}]}>Events</Text>
                         </View>
                     </View>
@@ -128,45 +187,25 @@ export default function ProfileScreen() {
                     </ScrollView>
                 </View>
 
-                {/* Festival Schedule */}
-                <View style={[styles.section, { backgroundColor: currentColors.cardBackground, borderColor: currentColors.secondaryButton }]}>
-                    <Text style={[styles.sectionTitle, {color: currentColors.textPrimary}]}>My Festival Schedule</Text>
-                    <View style={styles.scheduleItem}>
-                        <FontAwesome5 name="calendar-day" size={16} color="#3b82f6" />
-                        <Text style={[styles.scheduleText, {color: currentColors.textSecondary}]}>Day 1: Animation Track</Text>
-                    </View>
-                    <View style={styles.scheduleItem}>
-                        <FontAwesome5 name="bookmark" size={16} color="#3b82f6" />
-                        <Text style={[styles.scheduleText, {color: currentColors.textSecondary}]}>Saved: "AI in African Animation" (2PM)</Text>
-                    </View>
-                </View>
-
                 {/* Recent Activity */}
-                <View style={[styles.section, { backgroundColor: currentColors.cardBackground, borderColor: currentColors.secondaryButton }]}>
-                    <Text style={[styles.sectionTitle, {color: currentColors.textPrimary}]}>Recent Activity</Text>
-                    <View style={styles.activityItem}>
-                        <FontAwesome5 name="heart" size={16} color="#ef4444" />
-                        <View style={styles.activityContent}>
-                            <Text style={styles.activityText}>Liked "Digital Storytelling Workshop"</Text>
-                            <Text style={styles.activityDate}>Today, 10:30 AM</Text>
-                        </View>
+                {activities.length > 0 && (
+                    <View style={[styles.section, { backgroundColor: currentColors.cardBackground, borderColor: currentColors.secondaryButton }]}>
+                        <Text style={[styles.sectionTitle, {color: currentColors.textPrimary}]}>Recent Activity</Text>
+                        {activities.map((activity, index) => (
+                            <View key={index} style={styles.activityItem}>
+                                {activity.type === "event" ? (
+                                    <FontAwesome5 name="heart" size={16} color="#ef4444" />
+                                ) : (
+                                    <FontAwesome5 name="user-friends" size={16} color="#3b82f6" />
+                                )}
+                                <View style={styles.activityContent}>
+                                    <Text style={styles.activityText}>{activity.text}</Text>
+                                    <Text style={styles.activityDate}>{activity.date}</Text>
+                                </View>
+                            </View>
+                        ))}
                     </View>
-                    <View style={styles.activityItem}>
-                        <FontAwesome5 name="user-friends" size={16} color="#3b82f6" />
-                        <View style={styles.activityContent}>
-                            <Text style={styles.activityText}>Connected with 5 creatives</Text>
-                            <Text style={styles.activityDate}>Today, 9:15 AM</Text>
-                        </View>
-                    </View>
-                </View>
-
-                {/* Logout Button */}
-                {/* <TouchableOpacity 
-                    style={[styles.logoutButton, { backgroundColor: currentColors.secondaryButton }]}
-                    onPress={handleLogout}
-                >
-                    <Text style={[styles.logoutButtonText, { color: currentColors.textPrimary }]}>Log Out</Text>
-                </TouchableOpacity> */}
+                )}
             </ScrollView>
         </SafeAreaView>
     );
@@ -176,12 +215,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "#efefef",
-    },
-    headerContainer: {
-        position: 'absolute',
-        top: 40,
-        left: 20,
-        zIndex: 10,
     },
     bannerImage: {
         width: width-25,
@@ -220,13 +253,10 @@ const styles = StyleSheet.create({
     },
     editProfileButtonText: {
         fontWeight: 'bold',
-       // color: 'white',
     },
     contentContainer: {
         flex: 1,
         paddingHorizontal: 20,
-        // Adjusted bottom for tab bar
-        // paddingBottom: 60,
         marginBottom: 20,
     },
     userInfoContainer: {
@@ -243,17 +273,6 @@ const styles = StyleSheet.create({
     userName: {
         fontSize: 24,
         fontWeight: 'bold',
-    },
-    userHandle: {
-        fontSize: 16,
-        color: '#6b7280',
-        marginBottom: 10,
-    },
-    userBio: {
-        fontSize: 16,
-        lineHeight: 22,
-        color: '#4b5563',
-        marginBottom: 15,
     },
     userStats: {
         flexDirection: 'row',
@@ -283,11 +302,6 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         marginBottom: 12,
     },
-    chipWrap: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-    },
     chip: {
         paddingHorizontal: 12,
         paddingVertical: 6,
@@ -297,26 +311,11 @@ const styles = StyleSheet.create({
     chipActive: {
         backgroundColor: '#E0E7FF'
     },
-    chipInactive: {
-        backgroundColor: '#F3F4F6'
-    },
     chipText: {
         fontSize: 13
     },
     textActive: {
         color: '#3730A3'
-    },
-    textInactive: {
-        color: '#6B7280'
-    },
-    scheduleItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    scheduleText: {
-        marginLeft: 10,
-        color: '#4b5563',
     },
     activityItem: {
         flexDirection: "row",

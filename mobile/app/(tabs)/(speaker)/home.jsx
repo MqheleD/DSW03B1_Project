@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext,useRef } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import {
   View,
   Text,
@@ -9,27 +9,19 @@ import {
   StyleSheet,
   StatusBar,
   ActivityIndicator,
-  Animated, 
-  Easing
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
-import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-import StorySwiper from "../../../components/StorySwiper";
+// import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import { ThemeContext } from "@/hooks/ThemeContext";
 import { UserAuth } from "@/hooks/AuthContext";
-import { router,useRouter } from "expo-router";
-
-import supabase from "@/app/supabaseClient";
-import * as Animatable from 'react-native-animatable';
-
-
-
-
+import { router, useRouter } from "expo-router";
+import { Buffer } from "buffer";
+import supabase from "../../supabaseClient";
+import * as Animatable from "react-native-animatable";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
-
-
 
 export default function Home() {
   const [eventsData, setEventsData] = useState({ Today: [], Tomorrow: [] });
@@ -37,9 +29,11 @@ export default function Home() {
   const [selectedTab, setSelectedTab] = useState("Today");
   const [currentTime, setCurrentTime] = useState(new Date());
   const { currentColors, isDarkMode } = useContext(ThemeContext);
-  const { profile, loading } = UserAuth();
-
+  const { profile } = UserAuth();
+  const [slides, setSlides] = useState([]);
+  const [nameSess, setNameSess] = useState();
   const route = useRouter();
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -47,133 +41,173 @@ export default function Home() {
     return () => clearInterval(timer);
   }, []);
 
+  const handleUploadSlides = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        copyToCacheDirectory: true,
+      });
 
+      if (result.type === "cancel") return;
 
-const bounceAnim = useRef(new Animated.Value(0)).current;
+      const file = result.assets?.[0];
+      if (!file?.uri) {
+        alert("No file selected!");
+        return;
+      }
 
-   useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(bounceAnim, {
-          toValue: -10, // move UP by 10px
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(bounceAnim, {
-          toValue: 0, // back DOWN
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, [bounceAnim]);
+      setLoading(true);
 
+      const user = profile;
+      if (!user) {
+        alert("No user logged in!");
+        setLoading(false);
+        return;
+      }
+      const speakerId = user.id || user.user_id || user.profile_id;
 
+      const filename = file.name || `slide_${Date.now()}.pptx`;
+      const filePath = `${speakerId}/${Date.now()}_${filename}`;
 
-const fetchEvents = async () => {
-  try {
-    // 1. Get device's LOCAL date (August 7, 2025)
-    const localDate = new Date();
-    console.log("Device Local Date:", localDate.toString());
+      const fileContents = await FileSystem.readAsStringAsync(file.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      const blob = Buffer.from(fileContents, "base64");
 
-    // 2. Convert to YYYY-MM-DD string in LOCAL time (ignore timezone)
-    const getLocalDateString = (date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`; // "2025-08-07"
-    };
+      const { error: uploadError } = await supabase.storage
+        .from("speaker-presentation-slides")
+        .upload(filePath, blob, {
+          contentType:
+            file.mimeType ||
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+          upsert: true,
+        });
 
-    const todayStr = getLocalDateString(localDate);
-    const tomorrow = new Date(localDate);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = getLocalDateString(tomorrow);
+      if (uploadError) {
+        console.log("Upload error:", uploadError);
+        alert(uploadError.message || "Error uploading file!");
+        setLoading(false);
+        return;
+      }
 
-    console.log("Querying events for:", { todayStr, tomorrowStr });
+      const { data: publicData, error: urlError } = supabase.storage
+        .from("speaker-presentation-slides")
+        .getPublicUrl(filePath);
 
-    // 3. Fetch today's events (timezone-agnostic date comparison)
-    const { data: todayEvents } = await supabase
-      .from('sessions')
-      .select(`
-        id,
-        title,
-        description,
-        start_time,
-        end_time,
-        room:room_id (room_name, location),
-        speaker:speaker_id (full_name, photo_url)
-      `)
-      .gte('start_time', `${todayStr}T00:00:00`)
-      .lte('start_time', `${todayStr}T23:59:59`)
-      .order('start_time', { ascending: true });
+      if (urlError) {
+        console.log("Public URL error:", urlError);
+        alert(urlError.message || "Could not get file URL!");
+        setLoading(false);
+        return;
+      }
 
-    // 4. Fetch tomorrow's events
-    const { data: tomorrowEvents } = await supabase
-      .from('sessions')
-      .select(`
-        id,
-        title,
-        description,
-        start_time,
-        end_time,
-        room:room_id (room_name, location),
-        speaker:speaker_id (full_name, photo_url)
-      `)
-      .gte('start_time', `${tomorrowStr}T00:00:00`)
-      .lte('start_time', `${tomorrowStr}T23:59:59`)
-      .order('start_time', { ascending: true });
+      const fileUrl = publicData.publicUrl;
 
-    console.log("Fetched events:", {
-      today: todayEvents,
-      tomorrow: tomorrowEvents
-    });
+      const sessionName =
+        nameSess || eventsData?.Today?.[0]?.title || "General Session";
+      const { error: dbError } = await supabase
+        .from("presentation_slides")
+        .insert([
+          {
+            session_name: sessionName,
+            file_name: filename,
+            file_type:
+              file.mimeType ||
+              "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            file_url: fileUrl,
+          },
+        ]);
 
-    // 5. Format and set data
-    const formatTimeRange = (start, end) => {
-      const options = { hour: '2-digit', minute: '2-digit' };
-      return `${new Date(start).toLocaleTimeString([], options)} - ${new Date(end).toLocaleTimeString([], options)}`;
-    };
+      if (dbError) {
+        console.log("DB insert error:", dbError);
+        alert("Could not save slide metadata!");
+        setLoading(false);
+        return;
+      }
 
-    setEventsData({
-      Today: todayEvents?.map(event => ({
-        id: event.id,
-        title: event.title,
-        time: formatTimeRange(event.start_time, event.end_time),
-        location: event.room?.room_name || "TBD",
-        color: getRandomColor(),
-        speaker: event.speaker?.full_name || "TBD",
-        description: event.description,
-        image: event.speaker?.photo_url || "https://via.placeholder.com/150"
-      })) || [],
-      Tomorrow: tomorrowEvents?.map(event => ({
-        id: event.id,
-        title: event.title,
-        time: formatTimeRange(event.start_time, event.end_time),
-        location: event.room?.room_name || "TBD",
-        color: getRandomColor(),
-        speaker: event.speaker?.full_name || "TBD",
-        description: event.description,
-        image: event.speaker?.photo_url || "https://via.placeholder.com/150"
-      })) || []
-    });
+      alert("Slide uploaded successfully!");
+    } catch (err) {
+      console.log("Unexpected error:", err);
+      alert("Something went wrong while uploading!");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  } catch (error) {
-    console.error("Error fetching events:", error);
-    // Optional: Set error state for UI
-    setEventsData({
-      Today: [],
-      Tomorrow: [],
-      error: "Failed to load events"
-    });
-  }
-};
+  const fetchEvents = async () => {
+    try {
+      const localDate = new Date();
+      const getLocalDateString = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      };
 
-  const formatTime = (start, end) => {
-    const format = (dateStr) => {
-      const date = new Date(dateStr);
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    };
-    return `${format(start)} - ${format(end)}`;
+      const todayStr = getLocalDateString(localDate);
+      const tomorrow = new Date(localDate);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = getLocalDateString(tomorrow);
+
+      const { data: todayEvents } = await supabase
+        .from("sessions")
+        .select(
+          `id, title, description, start_time, end_time, room:room_id (room_name, location), speaker:speaker_id (full_name, photo_url)`
+        )
+        .gte("start_time", `${todayStr}T00:00:00`)
+        .lte("start_time", `${todayStr}T23:59:59`)
+        .order("start_time", { ascending: true });
+
+      const { data: tomorrowEvents } = await supabase
+        .from("sessions")
+        .select(
+          `id, title, description, start_time, end_time, room:room_id (room_name, location), speaker:speaker_id (full_name, photo_url)`
+        )
+        .gte("start_time", `${tomorrowStr}T00:00:00`)
+        .lte("start_time", `${tomorrowStr}T23:59:59`)
+        .order("start_time", { ascending: true });
+
+      const formatTimeRange = (start, end) => {
+        const options = { hour: "2-digit", minute: "2-digit" };
+        return `${new Date(start).toLocaleTimeString([], options)} - ${new Date(
+          end
+        ).toLocaleTimeString([], options)}`;
+      };
+
+      setEventsData({
+        Today:
+          todayEvents?.map((event) => ({
+            id: event.id,
+            title: event.title,
+            time: formatTimeRange(event.start_time, event.end_time),
+            location: event.room?.room_name || "TBD",
+            color: getRandomColor(),
+            speaker: event.speaker?.full_name || "TBD",
+            description: event.description,
+            image:
+              event.speaker?.photo_url || "https://via.placeholder.com/150",
+          })) || [],
+        Tomorrow:
+          tomorrowEvents?.map((event) => ({
+            id: event.id,
+            title: event.title,
+            time: formatTimeRange(event.start_time, event.end_time),
+            location: event.room?.room_name || "TBD",
+            color: getRandomColor(),
+            speaker: event.speaker?.full_name || "TBD",
+            description: event.description,
+            image:
+              event.speaker?.photo_url || "https://via.placeholder.com/150",
+          })) || [],
+      });
+    } catch (error) {
+      console.error("Error fetching events:", error);
+      setEventsData({
+        Today: [],
+        Tomorrow: [],
+        error: "Failed to load events",
+      });
+    }
   };
 
   const getRandomColor = () => {
@@ -187,43 +221,49 @@ const fetchEvents = async () => {
     day: "numeric",
   });
 
-  if (loading) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
-        <ActivityIndicator size="large" color={currentColors.primaryButton} />
-      </SafeAreaView>
-    );
-  }
+  useEffect(() => {
+    const nextEvent = eventsData.Today[0];
+    if (nextEvent) setNameSess(nextEvent.title);
+  }, [eventsData.Today]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: currentColors.background }]}
+    >
       <StatusBar style={isDarkMode ? "light" : "dark"} />
 
       {/* Nav Bar */}
-      <View style={[styles.navBar, { backgroundColor: currentColors.navBarBackground }]}>
+      <View
+        style={[
+          styles.navBar,
+          { backgroundColor: currentColors.navBarBackground },
+        ]}
+      >
         <Text style={[styles.navTitle, { color: currentColors.textPrimary }]}>
           Home
         </Text>
         <View style={styles.navIcons}>
           <TouchableOpacity
-            style={[styles.iconButton, { backgroundColor: currentColors.cardBackground }]}
-            onPress={() => router.push("/(screens)/Scanner")}
+            style={[
+              styles.iconButton,
+              { backgroundColor: currentColors.cardBackground },
+            ]}
+            onPress={() => router.push("/(screens)/Feed")}
           >
-            <MaterialCommunityIcons
-              name="line-scan"
-              size={16}
-              color={currentColors.textPrimary}
-            />
+            <FontAwesome6 name="images" size={24} color="black" />
           </TouchableOpacity>
         </View>
       </View>
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Profile Section */}
         <View style={styles.profileSection}>
           <View style={styles.profileImageWrapper}>
             <Image
               source={{
-                uri: profile?.avatar_url || "https://readdy.ai/api/search-image?query=professional%20portrait%20photo%20of%20a%20young%20woman%20with%20shoulder%20length%20brown%20hair%2C%20friendly%20smile%2C%20business%20casual%20attire%2C%20high%20quality%2C%20studio%20lighting%2C%20clean%20background%2C%20professional%20headshot&width=100&height=100&seq=1&orientation=squarish",
+                uri:
+                  profile?.avatar_url ||
+                  "https://via.placeholder.com/100x100.png",
               }}
               style={styles.profileImage}
             />
@@ -231,11 +271,21 @@ const fetchEvents = async () => {
           </View>
           <View style={{ marginLeft: 12 }}>
             {profile ? (
-              <Text style={[styles.profileName, { color: currentColors.textPrimary }]}>
+              <Text
+                style={[
+                  styles.profileName,
+                  { color: currentColors.textPrimary },
+                ]}
+              >
                 Hello, {profile.full_name}!
               </Text>
             ) : (
-              <Text style={[styles.profileName, { color: currentColors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.profileName,
+                  { color: currentColors.textSecondary },
+                ]}
+              >
                 Hello, Guest!
               </Text>
             )}
@@ -243,98 +293,135 @@ const fetchEvents = async () => {
           </View>
         </View>
 
-          
-  
-
         {/* Quick Actions */}
         <View style={styles.quickActions}>
-                <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: currentColors.cardBackground }]}
-                  onPress={() => router.push("/(screens)/Scanner")}
-                >
-                  <View style={[styles.actionIconCircle, { backgroundColor: currentColors.iconbackground }]}>
-                    <FontAwesome5 name="qrcode" size={20} color="#2563eb" />
-                  </View>
-                  <Text style={[styles.actionText, { color: currentColors.textThird }]}>Scan QR Code</Text>
-                </TouchableOpacity>
-      
-                <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: currentColors.cardBackground }]}
-                  onPress={() => router.push("/(screens)/ShareDetails")}
-                >
-                  <View style={[styles.actionIconCircle, {backgroundColor: currentColors.iconbackground }]}>
-                    <FontAwesome5 name="share-alt" size={20} color="#7c3aed" />
-                  </View>
-                  <Text style={[styles.actionText, { color: currentColors.textThird }]}>Share Details</Text>
-                </TouchableOpacity>
-              </View>
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              { backgroundColor: currentColors.cardBackground },
+            ]}
+            onPress={() => router.push("/(screens)/Scanner")}
+          >
+            <View
+              style={[
+                styles.actionIconCircle,
+                { backgroundColor: currentColors.iconbackground },
+              ]}
+            >
+              <FontAwesome5 name="qrcode" size={20} color="#2563eb" />
+            </View>
+            <Text
+              style={[styles.actionText, { color: currentColors.textThird }]}
+            >
+              Scan QR Code
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              { backgroundColor: currentColors.cardBackground },
+            ]}
+            onPress={() => router.push("/(screens)/ShareDetails")}
+          >
+            <View
+              style={[
+                styles.actionIconCircle,
+                { backgroundColor: currentColors.iconbackground },
+              ]}
+            >
+              <FontAwesome5 name="share-alt" size={20} color="#7c3aed" />
+            </View>
+            <Text
+              style={[styles.actionText, { color: currentColors.textThird }]}
+            >
+              Share Details
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Upcoming Event Banner */}
-
-    {eventsData.Today.length > 0 && (
-  <Animatable.View
-    animation="jello"
-    iterationCount="infinite"
-    duration={2000}
-    style={[
-      styles.upcomingEvent,
-      {
-        backgroundColor: currentColors.nextEvent,
-        shadowColor: currentColors.shadows,
-        shadowOffset: { width: 5, height: 5 },
-        shadowOpacity: 0.65,
-        shadowRadius: 3.84,
-        elevation: 5,
-      },
-    ]}
-  >
-    {/* Use the first event dynamically */}
-    {eventsData.Today[0] && (
-      <View style={styles.upcomingEventTop}>
-        <View>
-          <Text style={styles.nextEventLabel}>NEXT EVENT</Text>
-          <Text style={[styles.nextEventTitle]}>{eventsData.Today[0].title}</Text>
-          <View style={styles.upcomingEventRow}>
-            <FontAwesome5
-              name="map-marker-alt"
-              size={12}
-              color="black"
-              style={{ marginRight: 4 }}
-            />
-            <Text style={styles.upcomingEventText}>
-              {eventsData.Today[0].location}
-            </Text>
-          </View>
-        </View>
-      </View>
-    )}
-
-    <TouchableOpacity
-      style={[styles.joinButton, { backgroundColor: currentColors.background }]}
-      onPress={() => router.push("/(screens)/Scanner")}
-    >
-      <Text style={[styles.joinButtonText, { color: currentColors.buttonText }]}>
-        Check In
-      </Text>
-    </TouchableOpacity>
-  </Animatable.View>
-)}
+        {eventsData.Today.length > 0 && (
+          <Animatable.View
+            animation="pulse"
+            iterationCount="infinite"
+            duration={1500}
+            style={[
+              styles.upcomingEvent,
+              {
+                backgroundColor: currentColors.nextEvent,
+                shadowColor: currentColors.shadows,
+                shadowOffset: { width: 5, height: 5 },
+                shadowOpacity: 0.65,
+                shadowRadius: 3.84,
+                elevation: 5,
+              },
+            ]}
+          >
+            {eventsData.Today[0] && (
+              <View style={styles.upcomingEventTop}>
+                <View>
+                  <Text style={styles.nextEventLabel}>NEXT EVENT</Text>
+                  <Text style={[styles.nextEventTitle]}>
+                    {eventsData.Today[0].title}
+                  </Text>
+                  <View style={styles.upcomingEventRow}>
+                    <FontAwesome5
+                      name="map-marker-alt"
+                      size={12}
+                      color="black"
+                      style={{ marginRight: 4 }}
+                    />
+                    <Text style={styles.upcomingEventText}>
+                      {" "}
+                      {eventsData.Today[0].location}{" "}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
+            <TouchableOpacity
+              style={[
+                styles.joinButton,
+                { backgroundColor: currentColors.background },
+              ]}
+              onPress={handleUploadSlides}
+            >
+              <Text
+                style={[
+                  styles.joinButtonText,
+                  { color: currentColors.buttonText },
+                ]}
+              >
+                Upload
+              </Text>
+            </TouchableOpacity>
+          </Animatable.View>
+        )}
 
         {/* My Events */}
         <View style={{ marginTop: 24 }}>
-          <Text style={[styles.sectionTitle, { color: currentColors.textPrimary }]}>
+          <Text
+            style={[styles.sectionTitle, { color: currentColors.textPrimary }]}
+          >
             My Events
           </Text>
 
           {/* Tab Switcher */}
-          <View style={[styles.tabSwitcher, { backgroundColor: currentColors.cardBackground }]}>
+          <View
+            style={[
+              styles.tabSwitcher,
+              { backgroundColor: currentColors.cardBackground },
+            ]}
+          >
             {["Today", "Tomorrow"].map((tab) => (
               <TouchableOpacity
                 key={tab}
                 onPress={() => setSelectedTab(tab)}
                 style={[
                   styles.tabButton,
-                  selectedTab === tab && { backgroundColor: currentColors.primaryButton },
+                  selectedTab === tab && {
+                    backgroundColor: currentColors.primaryButton,
+                  },
                 ]}
               >
                 <Text
@@ -359,7 +446,10 @@ const fetchEvents = async () => {
             <View style={styles.modalOverlay}>
               <View style={styles.modalContainer}>
                 <Text style={styles.modalText}>Add the information here</Text>
-                <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={() => setModalVisible(false)}
+                >
                   <Text style={styles.modalButtons}>Close Modal</Text>
                 </TouchableOpacity>
               </View>
@@ -368,18 +458,45 @@ const fetchEvents = async () => {
 
           {/* Event List */}
           <View style={{ marginTop: 16 }}>
-            {(!eventsData[selectedTab] || eventsData[selectedTab].length === 0) ? (
-              <Text style={{ color: currentColors.textSecondary, textAlign: "center", marginTop: "auto" }}>
+            {!eventsData[selectedTab] ||
+            eventsData[selectedTab].length === 0 ? (
+              <Text
+                style={{
+                  color: currentColors.textSecondary,
+                  textAlign: "center",
+                  marginTop: "auto",
+                }}
+              >
                 No event data for {selectedTab}
               </Text>
             ) : (
               eventsData[selectedTab].map((event) => (
-                <View key={event.id} style={[styles.eventCard, { backgroundColor: currentColors.cardBackground }]}>
+                <View
+                  key={event.id}
+                  style={[
+                    styles.eventCard,
+                    { backgroundColor: currentColors.cardBackground },
+                  ]}
+                >
                   <View style={styles.eventCardHeader}>
-                    <View style={{ flexDirection: "row", alignItems: "center" }}>
-                      <View style={[styles.eventColorBar, { backgroundColor: event.color }]} />
+                    <View
+                      style={{ flexDirection: "row", alignItems: "center" }}
+                    >
+                      <View
+                        style={[
+                          styles.eventColorBar,
+                          { backgroundColor: event.color },
+                        ]}
+                      />
                       <View>
-                        <Text style={[styles.eventTitle, { color: currentColors.textThird }]}>{event.title}</Text>
+                        <Text
+                          style={[
+                            styles.eventTitle,
+                            { color: currentColors.textThird },
+                          ]}
+                        >
+                          {event.title}
+                        </Text>
                         <View style={styles.eventTimeRow}>
                           <FontAwesome5
                             name="clock"
@@ -387,25 +504,44 @@ const fetchEvents = async () => {
                             color={currentColors.textSecondary}
                             style={{ marginRight: 4 }}
                           />
-                          <Text style={[styles.eventTimeText, { color: currentColors.textSecondary }]}>
-                            {event.time}
+                          <Text
+                            style={[
+                              styles.eventTimeText,
+                              { color: currentColors.textSecondary },
+                            ]}
+                          >
+                            {" "}
+                            {event.time}{" "}
                           </Text>
                         </View>
                       </View>
                     </View>
-
                     <TouchableOpacity
                       style={styles.chevronButton}
                       onPress={() => setModalVisible(true)}
                     >
-                      <FontAwesome5 name="chevron-right" size={12} color="#9ca3af" />
+                      <FontAwesome5
+                        name="chevron-right"
+                        size={12}
+                        color="#9ca3af"
+                      />
                     </TouchableOpacity>
                   </View>
-
                   <View style={styles.eventLocationRow}>
-                    <FontAwesome5 name="map-marker-alt" size={12} color="#6b7280" style={{ marginRight: 4 }} />
-                    <Text style={[styles.eventLocationText, { color: currentColors.textSecondary }]}>
-                      {event.location}
+                    <FontAwesome5
+                      name="map-marker-alt"
+                      size={12}
+                      color="#6b7280"
+                      style={{ marginRight: 4 }}
+                    />
+                    <Text
+                      style={[
+                        styles.eventLocationText,
+                        { color: currentColors.textSecondary },
+                      ]}
+                    >
+                      {" "}
+                      {event.location}{" "}
                     </Text>
                   </View>
                 </View>
@@ -413,19 +549,19 @@ const fetchEvents = async () => {
             )}
           </View>
         </View>
-        <View>
-             
-        </View>
       </ScrollView>
+
+      {/* Loading overlay */}
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={currentColors.primaryButton} />
+        </View>
+      )}
     </SafeAreaView>
   );
 }
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f9fafb",
-  },
+  container: { flex: 1, backgroundColor: "#f9fafb" },
   navBar: {
     top: 0,
     left: 0,
@@ -442,14 +578,8 @@ const styles = StyleSheet.create({
     elevation: 3,
     zIndex: 10,
   },
-  navTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  navIcons: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
+  navTitle: { fontSize: 18, fontWeight: "600" },
+  navIcons: { flexDirection: "row", alignItems: "center" },
   iconButton: {
     width: 32,
     height: 32,
@@ -459,16 +589,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginLeft: 12,
   },
-  scrollContent: {
-    paddingTop: 20,
-    paddingHorizontal: 16,
-    paddingBottom: 100,
-  },
-  profileSection: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 16,
-  },
+  scrollContent: { paddingTop: 20, paddingHorizontal: 16, paddingBottom: 100 },
+  profileSection: { flexDirection: "row", alignItems: "center", marginTop: 16 },
   profileImageWrapper: {
     position: "relative",
     width: 56,
@@ -478,11 +600,7 @@ const styles = StyleSheet.create({
     borderColor: "#3b82f6",
     overflow: "hidden",
   },
-  profileImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
-  },
+  profileImage: { width: "100%", height: "100%", resizeMode: "cover" },
   onlineIndicator: {
     position: "absolute",
     bottom: -2,
@@ -494,14 +612,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#fff",
   },
-  profileName: {
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  profileDate: {
-    fontSize: 14,
-    color: "#6b7280",
-  },
+  profileName: { fontSize: 18, fontWeight: "600" },
+  profileDate: { fontSize: 14, color: "#6b7280" },
   quickActions: {
     marginTop: 32,
     flexDirection: "row",
@@ -527,20 +639,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
-  actionText: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
+  actionText: { fontSize: 14, fontWeight: "500" },
   upcomingEvent: {
     marginTop: 32,
     backgroundColor: "#3b82f6",
     borderRadius: 16,
     padding: 16,
   },
-  upcomingEventTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
+  upcomingEventTop: { flexDirection: "row", justifyContent: "space-between" },
   nextEventLabel: {
     fontSize: 12,
     fontWeight: "600",
@@ -558,10 +664,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 8,
   },
-  upcomingEventText: {
-    fontSize: 14,
-    color: "rgba(255,255,255,0.8)",
-  },
+  upcomingEventText: { fontSize: 14, color: "rgba(255,255,255,0.8)" },
   joinButton: {
     marginTop: 16,
     backgroundColor: "#fff",
@@ -569,14 +672,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
   },
-  joinButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-  },
+  joinButtonText: { fontSize: 14, fontWeight: "600" },
+  sectionTitle: { fontSize: 22, fontWeight: "700" },
   tabSwitcher: {
     marginTop: 16,
     flexDirection: "row",
@@ -604,24 +701,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  eventColorBar: {
-    width: 6,
-    height: 40,
-    borderRadius: 3,
-    marginRight: 12,
-  },
-  eventTitle: {
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  eventTimeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
-  },
-  eventTimeText: {
-    fontSize: 14,
-  },
+  eventColorBar: { width: 6, height: 40, borderRadius: 3, marginRight: 12 },
+  eventTitle: { fontWeight: "600", fontSize: 16 },
+  eventTimeRow: { flexDirection: "row", alignItems: "center", marginTop: 4 },
+  eventTimeText: { fontSize: 14 },
   chevronButton: {
     width: 32,
     height: 32,
@@ -635,10 +718,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 12,
   },
-  eventLocationText: {
-    fontSize: 14,
-    color: "#6b7280",
-  },
+  eventLocationText: { fontSize: 14, color: "#6b7280" },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -668,6 +748,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#3b82f6",
     paddingVertical: 10,
     paddingHorizontal: 20,
+
     borderRadius: 10,
   },
   modalButtons: {
@@ -675,5 +756,16 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 14,
     textAlign: "center",
+  },
+  loadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.3)",
+    zIndex: 999,
   },
 });

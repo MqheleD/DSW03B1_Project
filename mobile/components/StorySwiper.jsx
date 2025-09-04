@@ -27,6 +27,9 @@ export default function StorySwiper() {
     animation: require("../assets/images/Boom2.png"),
     gaming: require("../assets/characters/Gamer.png"),
     panel: require("../assets/characters/Panel.png"),
+    General: require("../assets/characters/General.png"),
+    keynote: require("../assets/characters/Speaker.png"),
+    masterclass: require("../assets/characters/Headset.png"),
   };
 
   useEffect(() => {
@@ -228,7 +231,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   tagCard: {
-    width: width * 0.6,
+    width: width * 0.45,
     height: 160,
     marginRight: 15,
     borderRadius: 20,

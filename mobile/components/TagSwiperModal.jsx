@@ -1,5 +1,5 @@
 // components/TagSwiperModal.js
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useContext } from "react";
 import {
   View,
   Text,
@@ -10,10 +10,13 @@ import {
   Dimensions,
   Animated,
   Modal,
+  ImageBackground,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import SessionStoryCard from "./SessionStoryCard";
 import SessionDetailsModal from "./SessionDetailsModal";
+
+import { ThemeContext } from "@/hooks/ThemeContext";
 
 const { width, height } = Dimensions.get("window");
 
@@ -22,6 +25,8 @@ export default function TagSwiperModal({ tag, sessions, onClose, onSessionSelect
   const [showSessionDetails, setShowSessionDetails] = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
   const scrollX = useRef(new Animated.Value(0)).current;
+
+  const {currentColors} = useContext(ThemeContext);
 
   const handleSessionPress = (session) => {
     setSelectedSession(session);
@@ -35,21 +40,21 @@ export default function TagSwiperModal({ tag, sessions, onClose, onSessionSelect
 
   const renderItem = ({ item, index }) => (
     <View style={styles.swiperItem}>
-      <TouchableOpacity 
-        activeOpacity={0.9} 
-        style={styles.fullSizeCard} 
+      <TouchableOpacity
+        activeOpacity={0.9}
+        style={styles.fullSizeCard}
         onPress={() => handleSessionPress(item)}
       >
-        <Image 
-          source={{ uri: item.image }} 
-          style={styles.image} 
-        //   defaultSource={require("../assets/images/default-session.png")}
+        <Image
+          source={{ uri: item.image }}
+          style={styles.image}
+          defaultSource={require("../assets/characters/General.png")}
         />
         <View style={styles.overlay} />
         <View style={styles.info}>
           <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
           <Text style={styles.speaker} numberOfLines={1}>{item.speaker}</Text>
-          <Text style={styles.details} numberOfLines={2}>
+          <Text style={[styles.details, {color: currentColors.primaryButton}]} numberOfLines={2}>
             {new Date(item.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {item.room}
           </Text>
         </View>
@@ -80,11 +85,15 @@ export default function TagSwiperModal({ tag, sessions, onClose, onSessionSelect
   }
 
   return (
-    <View style={styles.container}>
+    <ImageBackground 
+      style={styles.container} 
+      source={require("../assets/characters/Background.png")} 
+      resizeMode="cover"
+      >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.tagTitle}>{tag} Sessions</Text>
-        <Text style={styles.sessionCount}>
+        <Text style={styles.tagTitle}>{tag}</Text>
+        <Text style={[styles.sessionCount , {color: currentColors.primaryButton}]}>
           {currentIndex + 1} of {sessions.length}
         </Text>
       </View>
@@ -115,13 +124,13 @@ export default function TagSwiperModal({ tag, sessions, onClose, onSessionSelect
             index * width,
             (index + 1) * width,
           ];
-          
+
           const scale = scrollX.interpolate({
             inputRange,
             outputRange: [0.8, 1.2, 0.8],
             extrapolate: 'clamp',
           });
-          
+
           const opacity = scrollX.interpolate({
             inputRange,
             outputRange: [0.4, 1, 0.4],
@@ -136,6 +145,7 @@ export default function TagSwiperModal({ tag, sessions, onClose, onSessionSelect
                 {
                   opacity,
                   transform: [{ scale }],
+                  backgroundColor: currentColors.primaryButton,
                 },
               ]}
             />
@@ -146,13 +156,13 @@ export default function TagSwiperModal({ tag, sessions, onClose, onSessionSelect
       {/* Session Details Modal */}
       <Modal visible={showSessionDetails} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <SessionDetailsModal 
-            session={selectedSession} 
-            onClose={handleCloseSessionDetails} 
+          <SessionDetailsModal
+            session={selectedSession}
+            onClose={handleCloseSessionDetails}
           />
         </View>
       </Modal>
-    </View>
+    </ImageBackground>
   );
 }
 
@@ -160,7 +170,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     width: "100%",
-    backgroundColor: "rgba(0,0,0,0.95)",
+    // backgroundColor: "rgba(0,0,0,0.5)",
   },
   header: {
     position: "absolute",

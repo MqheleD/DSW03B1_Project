@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
-import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import StorySwiper from "../../../components/StorySwiper";
 import { ThemeContext } from "@/hooks/ThemeContext";
 import { UserAuth } from "@/hooks/AuthContext";
@@ -200,20 +200,24 @@ export default function Home() {
       )}
 
       {/* Nav Bar */}
-      <View style={[styles.navBar, { backgroundColor: currentColors.navBarBackground }]}>
+      <View
+        style={[
+          styles.navBar,
+          { backgroundColor: currentColors.navBarBackground },
+        ]}
+      >
         <Text style={[styles.navTitle, { color: currentColors.textPrimary }]}>
           Home
         </Text>
         <View style={styles.navIcons}>
           <TouchableOpacity
-            style={[styles.iconButton, { backgroundColor: currentColors.cardBackground }]}
-            onPress={() => router.push("/(screens)/Scanner")}
+            style={[
+              styles.iconButton,
+              { backgroundColor: currentColors.cardBackground },
+            ]}
+            onPress={() => router.push("/(screens)/Feed")}
           >
-            <MaterialCommunityIcons
-              name="line-scan"
-              size={16}
-              color={currentColors.textPrimary}
-            />
+            <FontAwesome6 name="images" size={24} color="black" />
           </TouchableOpacity>
         </View>
       </View>
@@ -293,7 +297,7 @@ export default function Home() {
             </View>
             <TouchableOpacity
               style={[styles.joinButton, { backgroundColor: currentColors.background }]}
-              onPress={() => router.push("/(screens)/Scanner")}
+              onPress={() => router.push("/(screens)/ShareDetails")}
             >
               <Text style={[styles.joinButtonText, { color: currentColors.buttonText }]}>Check In</Text>
             </TouchableOpacity>

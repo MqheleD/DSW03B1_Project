@@ -10,8 +10,8 @@ const tagMascot = {
   gaming: require("../assets/characters/Gamer.png"),
   // Tech: require("../assets/images/tech-mascot.png"),
   // VFX: require("../assets/images/vfx-mascot.png"),
-  // Panel: require("../assets/images/panel-mascot.png"),
-  // default: require("../assets/images/default-mascot.png"),
+  panel: require("../assets/characters/Panel.png"),
+  General: require("../assets/characters/General.png"),
 };
 
 export default function SessionStoryCard({ session, onPress, onLongPress, style }) {

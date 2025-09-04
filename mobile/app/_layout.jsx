@@ -12,22 +12,23 @@ export default function RootLayout() {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      setShowSplash(false);
-    }, 3000);
+    const timeout = setTimeout(() => setShowSplash(false), 3000);
     return () => clearTimeout(timeout);
   }, []);
 
-  if (showSplash) return <ThemeProvider>
+  if (showSplash)
+    return (
+      <ThemeProvider>
         <SplashScreen />
-      </ThemeProvider>;
+      </ThemeProvider>
+    );
 
   return (
     <AuthContextProvider>
       <ThemeProvider>
         <GestureHandlerRootView style={{ flex: 1 }}>
           <StatusBar style="auto" />
-          
+
           {/* Main app content */}
           <View style={{ flex: 1 }}>
             <Stack screenOptions={{ headerShown: false }} />
@@ -41,17 +42,20 @@ export default function RootLayout() {
   );
 }
 
-// 👇 new component that uses the hook *inside* the provider
+// 👇 NotificationWrapper must be *inside* AuthContextProvider
 function NotificationWrapper() {
   const { notification, showNotification } = useNotification();
 
-  if (!notification) return null;
+  // Only render if we have a notification AND it should be visible
+  if (!notification || !showNotification) return null;
 
   return (
-    <NotificationBanner 
+    <NotificationBanner
       message={notification.message}
       animation={notification.animation}
       visible={showNotification}
+      onHide={() => {}}
+      type={notification.type || "info"}
     />
   );
 }

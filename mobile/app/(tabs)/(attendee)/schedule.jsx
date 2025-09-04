@@ -47,24 +47,53 @@ const Schedule = () => {
     loadData();
   }, [profile?.id]);
 
-  const fetchFavorites = async () => {
-    if (!profile?.id) return;
-    const { data, error } = await supabase
-      .from("session_favorites")
-      .select("session_id")
-      .eq("user_id", profile.id);
+  // const fetchFavorites = async () => {
+  //   if (!profile?.id) return;
+  //   const { data, error } = await supabase
+  //     .from("session_favorites")
+  //     .select("session_id")
+  //     .eq("user_id", profile.id);
 
-    if (error) {
-      console.error("Error fetching favorites:", error);
-      return;
-    }
+  //   if (error) {
+  //     console.error("Error fetching favorites:", error);
+  //     return;
+  //   }
 
-    setFavorites(data.map(f => f.session_id));
+  //   setFavorites(data.map(f => f.session_id));
     
-    // Also update AsyncStorage for offline use
-    const favoritesKey = `favorites_${profile.id}`;
-    await AsyncStorage.setItem(favoritesKey, JSON.stringify(data.map(f => f.session_id)));
-  };
+  //   // Also update AsyncStorage for offline use
+  //   const favoritesKey = `favorites_${profile.id}`;
+  //   await AsyncStorage.setItem(favoritesKey, JSON.stringify(data.map(f => f.session_id)));
+  // };
+
+  const fetchFavorites = async () => {
+  if (!profile?.id) return;
+
+  const { data, error } = await supabase
+    .from("session_favorites")
+    .select("session_id, sessions(title, start_time)") // 👈 join session details
+    .eq("user_id", profile.id);
+
+  if (error) {
+    console.error("Error fetching favorites:", error);
+    return;
+  }
+
+  // Extract just IDs for quick checks
+  const favoriteIds = data.map(f => f.session_id);
+  setFavorites(favoriteIds);
+
+  // Save richer info to AsyncStorage for Profile
+  const favoritesKey = `favorites_${profile.id}`;
+  const sessionDetails = data.map(f => ({
+    id: f.session_id,
+    title: f.sessions?.title || "Untitled Session",
+    date: f.sessions?.start_time || new Date().toISOString(),
+  }));
+
+  await AsyncStorage.setItem(favoritesKey, JSON.stringify(sessionDetails));
+};
+
 
   const loadData = async () => {
     try {
