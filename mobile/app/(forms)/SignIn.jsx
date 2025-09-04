@@ -28,13 +28,14 @@ export default function Signin() {
 
   const [openInterest, setOpenInterest] = useState(false);
   // const [interest, setInterest] = useState(null);
-  const [interestsList, setInterestsList] = useState([
-    { label: "3D animation", value: "3D animation" },
-    { label: "AI integration", value: "AI integration" },
-    { label: "VFX", value: "VFX" },
-    { label: "Character development", value: "Character development" },
-    { label: "Film and television", value: "film and television" },
+  const [GenderList, setgenderList] = useState([
+    { label: "Female", value: "Female" },
+    { label: "Male", value: "Male" },
+    { label: "Non-Binary", value: "Non-Binary" },
+    { label: "Prefer not say", value: "Prefer not to say" },
   ]);
+
+  const [interestsList,setInterestsList]=([]);
 
   const [show, setShow] = useState(true);
 
@@ -244,7 +245,7 @@ export default function Signin() {
 
       if (profileError) throw profileError;
 
-      // ✅ Sync profile with context and AsyncStorage
+      
       await updateProfile(profileData);
 
       Alert.alert("Signed up successfully!");
@@ -318,13 +319,38 @@ export default function Signin() {
                   value={age}
                   onChangeText={setAge}
                 />
-                <TextInput
-                  style={styles.inputfield}
-                  placeholderTextColor="gray"
-                  value={gender}
-                  placeholder="Gender: *Optional"
-                  onChangeText={setGender}
-                />
+             
+   <View style={{ zIndex: 2000, width: "90%" }}>
+  <DropDownPicker
+    open={openInterest}
+    value={gender}                // ✅ bind to gender state
+    items={GenderList}            // ✅ supply GenderList items
+    setOpen={setOpenInterest}
+    setValue={setGender}          // ✅ update gender state directly
+    setItems={setgenderList}
+    placeholder="Select Gender"
+    style={{
+      borderWidth: 0,
+      backgroundColor: "white",
+      elevation: 2,
+      marginBottom: "5%",
+    }}
+    dropDownContainerStyle={{
+      borderWidth: 0,
+      backgroundColor: "white",
+      elevation: 2,
+      marginBottom: "20%",
+    }}
+    selectedItemContainerStyle={{ backgroundColor: "#88A8D1" }}
+    selectedItemLabelStyle={{
+      color: "black",
+      fontWeight: "bold",
+    }}
+    listItemLabelStyle={{
+      color: "black",
+    }}
+  />
+</View>
                 <TouchableOpacity
                   onPress={() => setShow(false)}
                   style={{
@@ -360,39 +386,7 @@ export default function Signin() {
                   }}
                 />
 
-                <View style={{ zIndex: 2000, width: "90%" }}>
-                  <DropDownPicker
-                    open={openInterest}
-                    value={interests}
-                    items={interestsList}
-                    setOpen={setOpenInterest}
-                    // setValue={(callback) => setInterest(callback(interest))}
-                    setValue={setInterests}
-                    setItems={setInterestsList}
-                    multiple={true}
-                    placeholder="Select Interest"
-                    style={{
-                      borderWidth: 0,
-                      backgroundColor: "white",
-                      elevation: 2,
-                      marginBottom: "5%",
-                    }}
-                    dropDownContainerStyle={{
-                      borderWidth: 0,
-                      backgroundColor: "white",
-                      elevation: 2,
-                      marginBottom: "20%",
-                    }}
-                    selectedItemContainerStyle={{ backgroundColor: "#88A8D1" }}
-                    selectedItemLabelStyle={{
-                      color: "black",
-                      fontWeight: "bold",
-                    }}
-                    listItemLabelStyle={{
-                      color: "black",
-                    }}
-                  />
-                </View>
+               
 
                 <View style={{ zIndex: 1000, width: "90%" }}>
                   <DropDownPicker
@@ -525,7 +519,7 @@ export default function Signin() {
           )}
         </View>
       </ScrollView>
-      {/*<View style={styles.imageSize}>*/}
+      {/*<View style={styles.imageSize}>
       <Image source={env_master_} style={styles.image} />
       {/*</View>*/}
     </KeyboardAvoidingView>
@@ -605,7 +599,8 @@ const styles = StyleSheet.create({
     // width: 500,
     // height: 450,
     resizeMode: "contain",
-    position: "absolute",
+     position: "absolute",
+    marginTop:"10%",
     bottom: 60,
     width: 250,
     height: 250,
