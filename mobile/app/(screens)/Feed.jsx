@@ -66,31 +66,88 @@ export default function Feed() {
     fetchImages();
   }, [fetchImages]);
 
-  const handleImagePick = async (camera = false) => {
-    const permission = camera
-      ? await ImagePicker.requestCameraPermissionsAsync()
-      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+  // const handleImagePick = async (camera = false) => {
+  //   const permission = camera
+  //     ? await ImagePicker.requestCameraPermissionsAsync()
+  //     : await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-    if (permission.status !== "granted") {
+  //   if (permission.status !== "granted") {
+  //     Alert.alert(
+  //       "Permission required",
+  //       `Please allow access to your ${camera ? "camera" : "photo library"}.`
+  //     );
+  //     return;
+  //   }
+
+  //   const result = camera
+  //     ? await ImagePicker.launchCameraAsync({
+  //         mediaTypes: ImagePicker.MediaTypeOptions.Images,
+  //         quality: 1,
+  //       })
+  //     : await ImagePicker.launchImageLibraryAsync({
+  //         mediaTypes: ImagePicker.MediaTypeOptions.Images,
+  //         quality: 1,
+  //       });
+
+  //   if (!result.canceled) {
+  //     await uploadToSupabase(result.assets[0].uri);
+  //   }
+  // };
+
+  const handleImagePick = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
       Alert.alert(
         "Permission required",
-        `Please allow access to your ${camera ? "camera" : "photo library"}.`
+        "Please allow access to your photo library."
       );
       return;
     }
 
-    const result = camera
-      ? await ImagePicker.launchCameraAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          quality: 1,
-        })
-      : await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          quality: 1,
-        });
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 1,
+    });
 
     if (!result.canceled) {
-      await uploadToSupabase(result.assets[0].uri);
+      const uri = result.assets[0].uri;
+      await uploadToSupabase(uri);
+    }
+  };
+
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission required", "Please allow access to your camera.");
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      const uri = result.assets[0].uri;
+
+      // Upload to Supabase
+      await uploadToSupabase(uri);
+
+      // Download to local storage
+      try {
+        const fileName = uri.split("/").pop();
+        const destination = FileSystem.documentDirectory + fileName;
+
+        await FileSystem.copyAsync({
+          from: uri,
+          to: destination,
+        });
+
+        Alert.alert("Saved!", "Photo uploaded and saved.");
+      } catch (error) {
+        console.error("Download failed:", error);
+        Alert.alert("Error", "Could not save photo.");
+      }
     }
   };
 
@@ -212,14 +269,14 @@ export default function Feed() {
       )}
       <View style={styles.buttonRow}>
         <Pressable
-          onPress={() => handleImagePick(false)}
+          onPress={handleImagePick}
           disabled={uploading}
           style={[styles.iconButton, uploading && { opacity: 0.5 }]}
         >
           <Ionicons name="cloud-upload-outline" size={28} color="#333" />
         </Pressable>
         <Pressable
-          onPress={() => handleImagePick(true)}
+          onPress={takePhoto}
           disabled={uploading}
           style={[styles.iconButton, uploading && { opacity: 0.5 }]}
         >
