@@ -74,7 +74,7 @@ export default function ProfileScreen() {
                 />
                 <View style={styles.buttonContainer}>
                     <TouchableOpacity style={[styles.editProfileButton, { backgroundColor: currentColors.primaryButton }]} >
-                        <Text style={[styles.editProfileButtonText,{color:currentColors.buttonText}]}>Share profile</Text>
+                        <Text style={[styles.editProfileButtonText,{color:currentColors.buttonText}]}>Profile</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
                         style={[styles.editProfileButton, {backgroundColor: currentColors.secondaryButton}]} 

@@ -12,7 +12,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
-import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+// import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import { ThemeContext } from "@/hooks/ThemeContext";
 import { UserAuth } from "@/hooks/AuthContext";
 import { router, useRouter } from "expo-router";
@@ -21,7 +22,6 @@ import supabase from "../../supabaseClient";
 import * as Animatable from "react-native-animatable";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
-
 
 export default function Home() {
   const [eventsData, setEventsData] = useState({ Today: [], Tomorrow: [] });
@@ -40,11 +40,6 @@ export default function Home() {
     fetchEvents();
     return () => clearInterval(timer);
   }, []);
-
-
- 
-
-
 
   const handleUploadSlides = async () => {
     try {
@@ -207,7 +202,11 @@ export default function Home() {
       });
     } catch (error) {
       console.error("Error fetching events:", error);
-      setEventsData({ Today: [], Tomorrow: [], error: "Failed to load events" });
+      setEventsData({
+        Today: [],
+        Tomorrow: [],
+        error: "Failed to load events",
+      });
     }
   };
 
@@ -249,13 +248,9 @@ export default function Home() {
               styles.iconButton,
               { backgroundColor: currentColors.cardBackground },
             ]}
-            onPress={() => router.push("/(screens)/Scanner")}
+            onPress={() => router.push("/(screens)/Feed")}
           >
-            <MaterialCommunityIcons
-              name="line-scan"
-              size={16}
-              color={currentColors.textPrimary}
-            />
+            <FontAwesome6 name="images" size={24} color="black" />
           </TouchableOpacity>
         </View>
       </View>
@@ -277,7 +272,10 @@ export default function Home() {
           <View style={{ marginLeft: 12 }}>
             {profile ? (
               <Text
-                style={[styles.profileName, { color: currentColors.textPrimary }]}
+                style={[
+                  styles.profileName,
+                  { color: currentColors.textPrimary },
+                ]}
               >
                 Hello, {profile.full_name}!
               </Text>
@@ -312,7 +310,9 @@ export default function Home() {
             >
               <FontAwesome5 name="qrcode" size={20} color="#2563eb" />
             </View>
-            <Text style={[styles.actionText, { color: currentColors.textThird }]}>
+            <Text
+              style={[styles.actionText, { color: currentColors.textThird }]}
+            >
               Scan QR Code
             </Text>
           </TouchableOpacity>
@@ -331,7 +331,9 @@ export default function Home() {
             >
               <FontAwesome5 name="share-alt" size={20} color="#7c3aed" />
             </View>
-            <Text style={[styles.actionText, { color: currentColors.textThird }]}>
+            <Text
+              style={[styles.actionText, { color: currentColors.textThird }]}
+            >
               Share Details
             </Text>
           </TouchableOpacity>
@@ -378,11 +380,17 @@ export default function Home() {
               </View>
             )}
             <TouchableOpacity
-              style={[styles.joinButton, { backgroundColor: currentColors.background }]}
+              style={[
+                styles.joinButton,
+                { backgroundColor: currentColors.background },
+              ]}
               onPress={handleUploadSlides}
             >
               <Text
-                style={[styles.joinButtonText, { color: currentColors.buttonText }]}
+                style={[
+                  styles.joinButtonText,
+                  { color: currentColors.buttonText },
+                ]}
               >
                 Upload
               </Text>
@@ -392,7 +400,9 @@ export default function Home() {
 
         {/* My Events */}
         <View style={{ marginTop: 24 }}>
-          <Text style={[styles.sectionTitle, { color: currentColors.textPrimary }]}>
+          <Text
+            style={[styles.sectionTitle, { color: currentColors.textPrimary }]}
+          >
             My Events
           </Text>
 
@@ -409,7 +419,9 @@ export default function Home() {
                 onPress={() => setSelectedTab(tab)}
                 style={[
                   styles.tabButton,
-                  selectedTab === tab && { backgroundColor: currentColors.primaryButton },
+                  selectedTab === tab && {
+                    backgroundColor: currentColors.primaryButton,
+                  },
                 ]}
               >
                 <Text
@@ -446,7 +458,8 @@ export default function Home() {
 
           {/* Event List */}
           <View style={{ marginTop: 16 }}>
-            {!eventsData[selectedTab] || eventsData[selectedTab].length === 0 ? (
+            {!eventsData[selectedTab] ||
+            eventsData[selectedTab].length === 0 ? (
               <Text
                 style={{
                   color: currentColors.textSecondary,
@@ -466,13 +479,21 @@ export default function Home() {
                   ]}
                 >
                   <View style={styles.eventCardHeader}>
-                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <View
+                      style={{ flexDirection: "row", alignItems: "center" }}
+                    >
                       <View
-                        style={[styles.eventColorBar, { backgroundColor: event.color }]}
+                        style={[
+                          styles.eventColorBar,
+                          { backgroundColor: event.color },
+                        ]}
                       />
                       <View>
                         <Text
-                          style={[styles.eventTitle, { color: currentColors.textThird }]}
+                          style={[
+                            styles.eventTitle,
+                            { color: currentColors.textThird },
+                          ]}
                         >
                           {event.title}
                         </Text>
@@ -499,7 +520,11 @@ export default function Home() {
                       style={styles.chevronButton}
                       onPress={() => setModalVisible(true)}
                     >
-                      <FontAwesome5 name="chevron-right" size={12} color="#9ca3af" />
+                      <FontAwesome5
+                        name="chevron-right"
+                        size={12}
+                        color="#9ca3af"
+                      />
                     </TouchableOpacity>
                   </View>
                   <View style={styles.eventLocationRow}>
@@ -536,78 +561,211 @@ export default function Home() {
   );
 }
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f9fafb", },
-  navBar: { top: 0, left: 0, right: 0, height: 56, flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, shadowColor: "#000", shadowOpacity: 0.1, shadowOffset: { width: 0, height: 1 }, shadowRadius: 4, elevation: 3, zIndex: 10, },
-  navTitle: { fontSize: 18, fontWeight: "600", },
-  navIcons: { flexDirection: "row", alignItems: "center", },
-  iconButton: { width: 32, height: 32, borderRadius: 16, backgroundColor: "#f3f4f6", justifyContent: "center", alignItems: "center", marginLeft: 12, },
-  scrollContent: { paddingTop: 20, paddingHorizontal: 16, paddingBottom: 100, },
-  profileSection: { flexDirection: "row", alignItems: "center", marginTop: 16, },
-  profileImageWrapper: { position: "relative", width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: "#3b82f6", overflow: "hidden", },
-  profileImage: { width: "100%", height: "100%", resizeMode: "cover", },
-  onlineIndicator: { position: "absolute", bottom: -2, right: -2, width: 20, height: 20, backgroundColor: "#22c55e", borderRadius: 10, borderWidth: 2, borderColor: "#fff", },
-  profileName: { fontSize: 18, fontWeight: "600", },
-  profileDate: { fontSize: 14, color: "#6b7280", },
-  quickActions: { marginTop: 32, flexDirection: "row", justifyContent: "space-between", },
-  actionButton: { flex: 1, marginHorizontal: 6, paddingVertical: 16, borderRadius: 16, shadowColor: "#000", shadowOpacity: 0.05, shadowOffset: { width: 0, height: 1 }, shadowRadius: 3, elevation: 2, alignItems: "center", },
-  actionIconCircle: { width: 48, height: 48, borderRadius: 999999, justifyContent: "center", alignItems: "center", marginBottom: 8, },
-  actionText: { fontSize: 14, fontWeight: "500", },
-  upcomingEvent: { marginTop: 32, backgroundColor: "#3b82f6", borderRadius: 16, padding: 16, },
-  upcomingEventTop: { flexDirection: "row", justifyContent: "space-between", },
-  nextEventLabel: { fontSize: 12, fontWeight: "600", opacity: 0.8, color: "#fff", },
-  nextEventTitle: { fontSize: 20, fontWeight: "700", marginTop: 4, color: "#fff", },
-  upcomingEventRow: { flexDirection: "row", alignItems: "center", marginTop: 8, },
-  upcomingEventText: { fontSize: 14, color: "rgba(255,255,255,0.8)", },
-  joinButton: { marginTop: 16, backgroundColor: "#fff", paddingVertical: 12, borderRadius: 12, alignItems: "center", },
-  joinButtonText: { fontSize: 14, fontWeight: "600", },
-  sectionTitle: { fontSize: 22, fontWeight: "700", },
-  tabSwitcher: { marginTop: 16, flexDirection: "row", borderRadius: 12, padding: 4, },
-  tabButton: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: "center", },
-  eventCard: { borderRadius: 16, padding: 16, marginBottom: 16, shadowColor: "#000", shadowOpacity: 0.05, shadowOffset: { width: 0, height: 1 }, shadowRadius: 3, elevation: 2, },
-  eventCardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", },
-  eventColorBar: { width: 6, height: 40, borderRadius: 3, marginRight: 12, },
-  eventTitle: { fontWeight: "600", fontSize: 16, },
-  eventTimeRow: { flexDirection: "row", alignItems: "center", marginTop: 4, },
-  eventTimeText: { fontSize: 14, },
-  chevronButton: { width: 32, height: 32, borderRadius: 16, backgroundColor: "#f3f4f6", justifyContent: "center", alignItems: "center", },
-  eventLocationRow: { flexDirection: "row", alignItems: "center", marginTop: 12, },
-  eventLocationText: { fontSize: 14, color: "#6b7280", },
-  modalOverlay: { flex: 1, 
-    backgroundColor: "rgba(0, 0, 0, 0.5)", justifyContent: "center", alignItems: "center", },
-  modalContainer: { width: "80%",
-     backgroundColor: "#fff",
-      borderRadius: 16, 
-      padding: 24, 
-      alignItems: "center",
-       shadowColor: "#000", 
-       shadowOpacity: 0.2,
-        shadowOffset: { width: 0, height: 2 }, 
-        shadowRadius: 6, 
-        elevation: 5, },
-  modalText: { fontSize: 16,
-     fontWeight: "500", 
-     color: "#111827",
-      textAlign: "center", },
-  closeButton: { marginTop: 20,
-     backgroundColor: "#3b82f6", 
-     paddingVertical: 10, 
-     paddingHorizontal: 20, 
-     
-     borderRadius: 10, },
-  modalButtons: { color: "#fff", 
-    fontWeight: "600", 
-    fontSize: 14, 
-    textAlign: "center", },
-  loadingOverlay: {
-  position: "absolute",
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  justifyContent: "center",
-  alignItems: "center",
-  backgroundColor: "rgba(0,0,0,0.3)", 
-  zIndex: 999,
-},
-});
+  container: { flex: 1, backgroundColor: "#f9fafb" },
+  navBar: {
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 56,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 10,
+  },
+  navTitle: { fontSize: 18, fontWeight: "600" },
+  navIcons: { flexDirection: "row", alignItems: "center" },
+  iconButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#f3f4f6",
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 12,
+  },
+  scrollContent: { paddingTop: 20, paddingHorizontal: 16, paddingBottom: 100 },
+  profileSection: { flexDirection: "row", alignItems: "center", marginTop: 16 },
+  profileImageWrapper: {
+    position: "relative",
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
+    borderColor: "#3b82f6",
+    overflow: "hidden",
+  },
+  profileImage: { width: "100%", height: "100%", resizeMode: "cover" },
+  onlineIndicator: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    width: 20,
+    height: 20,
+    backgroundColor: "#22c55e",
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+  profileName: { fontSize: 18, fontWeight: "600" },
+  profileDate: { fontSize: 14, color: "#6b7280" },
+  quickActions: {
+    marginTop: 32,
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  actionButton: {
+    flex: 1,
+    marginHorizontal: 6,
+    paddingVertical: 16,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 3,
+    elevation: 2,
+    alignItems: "center",
+  },
+  actionIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 999999,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  actionText: { fontSize: 14, fontWeight: "500" },
+  upcomingEvent: {
+    marginTop: 32,
+    backgroundColor: "#3b82f6",
+    borderRadius: 16,
+    padding: 16,
+  },
+  upcomingEventTop: { flexDirection: "row", justifyContent: "space-between" },
+  nextEventLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    opacity: 0.8,
+    color: "#fff",
+  },
+  nextEventTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginTop: 4,
+    color: "#fff",
+  },
+  upcomingEventRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  upcomingEventText: { fontSize: 14, color: "rgba(255,255,255,0.8)" },
+  joinButton: {
+    marginTop: 16,
+    backgroundColor: "#fff",
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  joinButtonText: { fontSize: 14, fontWeight: "600" },
+  sectionTitle: { fontSize: 22, fontWeight: "700" },
+  tabSwitcher: {
+    marginTop: 16,
+    flexDirection: "row",
+    borderRadius: 12,
+    padding: 4,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  eventCard: {
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  eventCardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  eventColorBar: { width: 6, height: 40, borderRadius: 3, marginRight: 12 },
+  eventTitle: { fontWeight: "600", fontSize: 16 },
+  eventTimeRow: { flexDirection: "row", alignItems: "center", marginTop: 4 },
+  eventTimeText: { fontSize: 14 },
+  chevronButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#f3f4f6",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  eventLocationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 12,
+  },
+  eventLocationText: { fontSize: 14, color: "#6b7280" },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContainer: {
+    width: "80%",
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 24,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  modalText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#111827",
+    textAlign: "center",
+  },
+  closeButton: {
+    marginTop: 20,
+    backgroundColor: "#3b82f6",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
 
+    borderRadius: 10,
+  },
+  modalButtons: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 14,
+    textAlign: "center",
+  },
+  loadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.3)",
+    zIndex: 999,
+  },
+});

@@ -18,7 +18,7 @@ export default function TabsLayout() {
           left: 20,
           right: 20,
           elevation: 10,
-          backgroundColor: currentColors.navBarBackground, 
+          backgroundColor: currentColors.navBarBackground, // Use the card background color from the theme
           borderRadius: 30,
           height: 70,
           shadowColor: "#000",
@@ -42,11 +42,29 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="map"
+        options={{
+          title: "Map",
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons name="map" size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="schedule"
         options={{
           title: "Schedule",
           tabBarIcon: ({ color }) => (
             <MaterialIcons name="schedule" size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="network"
+        options={{
+          title: "Network",
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons name="people-alt" size={24} color={color} />
           ),
         }}
       />
