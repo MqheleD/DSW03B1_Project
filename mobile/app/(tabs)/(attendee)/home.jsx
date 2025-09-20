@@ -1,5 +1,4 @@
 // screens/Home.js
-// screens/Home.js
 import React, { useState, useEffect, useContext } from "react";
 import {
   View,
@@ -12,6 +11,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import FontAwesome from "react-native-vector-icons/FontAwesome";
 import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import StorySwiper from "../../../components/StorySwiper";
@@ -20,6 +20,7 @@ import { UserAuth } from "@/hooks/AuthContext";
 import { router } from "expo-router";
 import supabase from "@/app/supabaseClient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import LottieView from "lottie-react-native";
 
 // ✅ import notifications hook
 import useNotification from "@/hooks/useNotification";
@@ -412,6 +413,7 @@ export default function Home() {
           <View style={{ marginTop: 16 }}>
             {!eventsData[selectedTab] ||
             eventsData[selectedTab].length === 0 ? (
+<View style={{flex: 1, justifyContent: "center", alignItems: "center"}}>
               <Text
                 style={{
                   color: currentColors.textSecondary,
@@ -421,6 +423,7 @@ export default function Home() {
               >
                 No event data for {selectedTab}
               </Text>
+              </View>
             ) : (
               eventsData[selectedTab].map((event) => (
                 <View
@@ -469,7 +472,7 @@ export default function Home() {
                     </View>
 
                     <TouchableOpacity onPress={() => toggleFavorite(event)}>
-                      <FontAwesome5
+                      <FontAwesome
                         name={
                           favorites.some((fav) => fav.id === event.id)
                             ? "heart"

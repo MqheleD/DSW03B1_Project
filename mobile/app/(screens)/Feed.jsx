@@ -16,6 +16,7 @@ import * as FileSystem from "expo-file-system";
 import { Ionicons } from "@expo/vector-icons";
 import supabase from "@/app/supabaseClient";
 import { UserAuth } from "../../hooks/AuthContext";
+import {SafeAreaView} from "react-native-safe-area-context";
 
 const numColumns = 3;
 const screenWidth = Dimensions.get("window").width;
@@ -230,7 +231,8 @@ export default function Feed() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      
       <Image
         source={require('@/assets/images/header-image.png')} // or use a remote URI
         style={styles.bannerImage}
@@ -317,7 +319,7 @@ export default function Feed() {
           </Pressable>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 

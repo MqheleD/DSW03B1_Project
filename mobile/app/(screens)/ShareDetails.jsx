@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Image, ActivityIndicator, ScrollView } from 're
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import QRCode from 'react-native-qrcode-svg';
 import { UserAuth } from '@/hooks/AuthContext';
-
+import {SafeAreaView} from "react-native-safe-area-context";
 export default function MyQRCodeScreen() {
   const { session, profile } = UserAuth();
   const [socialLinks, setSocialLinks] = useState([]);
@@ -50,7 +50,8 @@ export default function MyQRCodeScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <SafeAreaView contentContainerStyle={styles.container}>
+      <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.header}>Your AVIJOZI Profile QR</Text>
 
       <Image
@@ -70,7 +71,8 @@ export default function MyQRCodeScreen() {
       </View>
 
       <Text style={styles.note}>Let others scan this to connect with you.</Text>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 

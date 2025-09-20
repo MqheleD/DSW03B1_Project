@@ -516,16 +516,7 @@ export default function Home() {
                         </View>
                       </View>
                     </View>
-                    <TouchableOpacity
-                      style={styles.chevronButton}
-                      onPress={() => setModalVisible(true)}
-                    >
-                      <FontAwesome5
-                        name="chevron-right"
-                        size={12}
-                        color="#9ca3af"
-                      />
-                    </TouchableOpacity>
+
                   </View>
                   <View style={styles.eventLocationRow}>
                     <FontAwesome5

@@ -10,10 +10,11 @@ import {
   Alert,
   Platform,
   TextInput,
+  Modal,
+  Image,
 } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { Picker } from '@react-native-picker/picker';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import supabase from '../../supabaseClient';
 import { colors, Icons } from '../../constants/theme';
 
@@ -35,6 +36,72 @@ const overlaps = (aStart, aEnd, bStart, bEnd) => {
   return aS < bE && bS < aE;
 };
 
+// Helper functions for custom date/time picker
+const generateHours = () => {
+  const hours = [];
+  for (let i = 0; i < 24; i++) {
+    hours.push({ label: i.toString().padStart(2, '0'), value: i });
+  }
+  return hours;
+};
+
+const generateMinutes = () => {
+  const minutes = [];
+  for (let i = 0; i < 60; i += 5) {
+    minutes.push({ label: i.toString().padStart(2, '0'), value: i });
+  }
+  return minutes;
+};
+
+const generateDays = (startDate, count = 7) => {
+  const days = [];
+  for (let i = 0; i < count; i++) {
+    const date = new Date(startDate);
+    date.setDate(date.getDate() + i);
+    days.push({
+      label: date.toLocaleDateString(),
+      value: date.toISOString().split('T')[0],
+      date: new Date(date)
+    });
+  }
+  return days;
+};
+
+/* ===========================
+   Empty State Component
+=========================== */
+
+const EmptyState = ({ userRole, onRefresh, loading }) => {
+  return (
+    <View style={emptyStyles.container}>
+      <View style={emptyStyles.content}>
+        <Text style={emptyStyles.icon}>📅</Text>
+        <Text style={emptyStyles.title}>No Sessions Scheduled</Text>
+        <Text style={emptyStyles.subtitle}>
+          {userRole === 'admin' 
+            ? 'Get started by adding your first session to the schedule.'
+            : 'Check back later for upcoming sessions and events.'
+          }
+        </Text>
+        
+        {userRole !== 'admin' && (
+          <TouchableOpacity 
+            style={emptyStyles.secondaryButton}
+            onPress={onRefresh}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Text style={emptyStyles.secondaryButtonText}>Refresh</Text>
+            )}
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+};
+
 /* ===========================
    Input Component
 =========================== */
@@ -48,6 +115,114 @@ const Input = ({ style, ...props }) => {
         placeholderTextColor="#999"
       />
     </View>
+  );
+};
+
+/* ===========================
+   Custom DateTimePicker Component
+=========================== */
+
+const CustomDateTimePicker = ({ 
+  visible, 
+  onClose, 
+  onSelect, 
+  initialDate = new Date() 
+}) => {
+  const [selectedDate, setSelectedDate] = useState(initialDate.toISOString().split('T')[0]);
+  const [selectedHour, setSelectedHour] = useState(initialDate.getHours());
+  const [selectedMinute, setSelectedMinute] = useState(Math.floor(initialDate.getMinutes() / 5) * 5);
+
+  const days = generateDays(new Date(), 30);
+  const hours = generateHours();
+  const minutes = generateMinutes();
+
+  const handleConfirm = () => {
+    const selectedDay = days.find(day => day.value === selectedDate);
+    if (selectedDay) {
+      const date = new Date(selectedDay.date);
+      date.setHours(selectedHour);
+      date.setMinutes(selectedMinute);
+      date.setSeconds(0);
+      date.setMilliseconds(0);
+      onSelect(date);
+    }
+    onClose();
+  };
+
+  if (!visible) return null;
+
+  return (
+    <Modal
+      transparent={true}
+      animationType="slide"
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <View style={customPickerStyles.overlay}>
+        <View style={customPickerStyles.container}>
+          <Text style={customPickerStyles.title}>Select Date and Time</Text>
+          
+          <View style={customPickerStyles.pickerContainer}>
+            <Text style={customPickerStyles.label}>Date</Text>
+            <View style={customPickerStyles.picker}>
+              <Picker
+                selectedValue={selectedDate}
+                onValueChange={setSelectedDate}
+              >
+                {days.map(day => (
+                  <Picker.Item key={day.value} label={day.label} value={day.value} />
+                ))}
+              </Picker>
+            </View>
+          </View>
+
+          <View style={customPickerStyles.timeContainer}>
+            <View style={customPickerStyles.timePicker}>
+              <Text style={customPickerStyles.label}>Hour</Text>
+              <View style={customPickerStyles.picker}>
+                <Picker
+                  selectedValue={selectedHour}
+                  onValueChange={setSelectedHour}
+                >
+                  {hours.map(hour => (
+                    <Picker.Item key={hour.value} label={hour.label} value={hour.value} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+
+            <View style={customPickerStyles.timePicker}>
+              <Text style={customPickerStyles.label}>Minute</Text>
+              <View style={customPickerStyles.picker}>
+                <Picker
+                  selectedValue={selectedMinute}
+                  onValueChange={setSelectedMinute}
+                >
+                  {minutes.map(minute => (
+                    <Picker.Item key={minute.value} label={minute.label} value={minute.value} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+          </View>
+
+          <View style={customPickerStyles.buttonContainer}>
+            <TouchableOpacity 
+              style={[customPickerStyles.button, customPickerStyles.cancelButton]} 
+              onPress={onClose}
+            >
+              <Text style={customPickerStyles.buttonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[customPickerStyles.button, customPickerStyles.confirmButton]} 
+              onPress={handleConfirm}
+            >
+              <Text style={customPickerStyles.buttonText}>Confirm</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 };
 
@@ -76,12 +251,8 @@ const SessionModal = ({
       : new Date(Date.now() + 60 * 60 * 1000),
   }));
 
-  // Separate state for picker visibility and type
-  const [datePickerState, setDatePickerState] = useState({
-    show: false,
-    mode: 'date', // 'date' or 'time'
-    field: null, // 'start' or 'end'
-  });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [currentDateField, setCurrentDateField] = useState(null);
 
   const [tagsOpen, setTagsOpen] = useState(false);
   const [tagsValue, setTagsValue] = useState(form.tags || '');
@@ -94,44 +265,19 @@ const SessionModal = ({
 
   const onChange = (k, v) => setForm((prev) => ({ ...prev, [k]: v }));
 
-  // Close any open pickers when tags dropdown opens
-  const handleTagsOpen = (open) => {
-    if (open) {
-      setDatePickerState({ show: false, mode: 'date', field: null });
+  const handleDateSelect = (date) => {
+    if (currentDateField) {
+      const fieldName = currentDateField === 'start' ? 'start_time' : 'end_time';
+      onChange(fieldName, date);
     }
-    setTagsOpen(open);
+    setShowDatePicker(false);
+    setCurrentDateField(null);
   };
 
-  // Improved date picker handler
-  const handleDateTimeChange = (event, selectedDate) => {
-    console.log('DateTimePicker event:', event?.type, selectedDate);
-    
-    // Always hide picker on Android after selection
-    if (Platform.OS === 'android') {
-      setDatePickerState({ show: false, mode: 'date', field: null });
-    }
-
-    // Only process valid selections (not dismissals)
-    if (event?.type === 'set' && selectedDate && datePickerState.field) {
-      const fieldName = datePickerState.field === 'start' ? 'start_time' : 'end_time';
-      onChange(fieldName, selectedDate);
-    }
-
-    // For iOS, hide picker after any interaction
-    if (Platform.OS === 'ios' && event?.type !== 'set') {
-      setDatePickerState({ show: false, mode: 'date', field: null });
-    }
-  };
-
-  const showDatePicker = (field) => {
-    // Close tags dropdown if open
+  const openDatePicker = (field) => {
     setTagsOpen(false);
-    
-    setDatePickerState({
-      show: true,
-      mode: 'datetime',
-      field: field,
-    });
+    setCurrentDateField(field);
+    setShowDatePicker(true);
   };
 
   const submit = () => {
@@ -217,11 +363,8 @@ const SessionModal = ({
               open={tagsOpen}
               value={tagsValue}
               items={tagsItems}
-              setOpen={handleTagsOpen}
-              setValue={(value) => {
-                setTagsValue(value);
-                onChange('tags', value);
-              }}
+              setOpen={setTagsOpen}
+              setValue={setTagsValue}
               setItems={setTagsItems}
               multiple={false}
               mode="BADGE"
@@ -240,7 +383,7 @@ const SessionModal = ({
               <Text style={modalStyles.label}>Start</Text>
               <TouchableOpacity
                 style={modalStyles.timeBtn}
-                onPress={() => showDatePicker('start')}
+                onPress={() => openDatePicker('start')}
                 disabled={tagsOpen}
               >
                 <Text style={modalStyles.timeBtnText}>{fmtTime(form.start_time)}</Text>
@@ -250,7 +393,7 @@ const SessionModal = ({
               <Text style={modalStyles.label}>End</Text>
               <TouchableOpacity
                 style={modalStyles.timeBtn}
-                onPress={() => showDatePicker('end')}
+                onPress={() => openDatePicker('end')}
                 disabled={tagsOpen}
               >
                 <Text style={modalStyles.timeBtnText}>{fmtTime(form.end_time)}</Text>
@@ -258,17 +401,15 @@ const SessionModal = ({
             </View>
           </View>
 
-          {/* Date/Time Picker */}
-          {datePickerState.show && (
-            <DateTimePicker
-              value={datePickerState.field === 'start' ? form.start_time : form.end_time}
-              mode={datePickerState.mode}
-              display={Platform.OS === 'ios' ? 'compact' : 'default'}
-              onChange={handleDateTimeChange}
-              minimumDate={new Date()}
-              textColor={Platform.OS === 'ios' ? colors.text : undefined}
-            />
-          )}
+          <CustomDateTimePicker
+            visible={showDatePicker}
+            onClose={() => {
+              setShowDatePicker(false);
+              setCurrentDateField(null);
+            }}
+            onSelect={handleDateSelect}
+            initialDate={currentDateField === 'start' ? form.start_time : form.end_time}
+          />
 
           <View style={modalStyles.row}>
             <TouchableOpacity 
@@ -293,34 +434,35 @@ const SessionModal = ({
 };
 
 /* ===========================
-   Main Sessions Tab Component - UPDATED WITH SYNC SUPPORT
+   Main Sessions Tab Component
 =========================== */
 
 const SessionsTab = ({ 
-  // Passed props from parent for synchronization
   rooms = [], 
   speakers = [], 
   sessions = [], 
   setSessions,
   occupancyMap = {},
-  onSessionChange, // Callback to notify parent of session changes
-  fetchSessions, // Function to refresh sessions
+  onSessionChange,
+  fetchSessions,
   userRole = 'admin'
 }) => {
-  const [loading, setLoading] = useState(false); // Changed from true to false since data comes from props
+  const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
-
   const [showAddModal, setShowAddModal] = useState(false);
   const [editSession, setEditSession] = useState(null);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
-  // If sessions data is managed by parent, we don't need to fetch it here
-  // But we still need initial load if sessions array is empty
+  // Only fetch sessions once on initial load if they're empty
   useEffect(() => {
-    if (sessions.length === 0 && fetchSessions) {
+    if (sessions.length === 0 && fetchSessions && !hasLoaded) {
       setLoading(true);
-      fetchSessions().finally(() => setLoading(false));
+      fetchSessions().finally(() => {
+        setLoading(false);
+        setHasLoaded(true);
+      });
     }
-  }, [sessions.length, fetchSessions]);
+  }, [sessions.length, fetchSessions, hasLoaded]);
 
   const roomById = useMemo(() => {
     const m = new Map();
@@ -351,10 +493,7 @@ const SessionsTab = ({
     try {
       const conflict = validateConflict(payload);
       if (conflict) {
-        Alert.alert(
-          'Schedule conflict',
-          `Another session ("${conflict.title}") is already in this room during that time.`
-        );
+        Alert.alert('Schedule conflict', `Another session ("${conflict.title}") is already in this room during that time.`);
         return;
       }
 
@@ -370,17 +509,14 @@ const SessionsTab = ({
 
       if (error) throw error;
 
-      // Update local state immediately for better UX
       if (setSessions && data && data[0]) {
         setSessions(prevSessions => [...prevSessions, data[0]]);
       }
 
-      // Notify parent component of the change
       if (onSessionChange) {
         onSessionChange('add', data[0]);
       }
 
-      // Refresh sessions if function is available
       if (fetchSessions) {
         await fetchSessions();
       }
@@ -401,10 +537,7 @@ const SessionsTab = ({
     try {
       const conflict = validateConflict(payload, id);
       if (conflict) {
-        Alert.alert(
-          'Schedule conflict',
-          `Another session ("${conflict.title}") is already in this room during that time.`
-        );
+        Alert.alert('Schedule conflict', `Another session ("${conflict.title}") is already in this room during that time.`);
         return;
       }
 
@@ -424,21 +557,14 @@ const SessionsTab = ({
 
       if (error) throw error;
 
-      // Update local state immediately
       if (setSessions && data && data[0]) {
-        setSessions(prevSessions => 
-          prevSessions.map(session => 
-            session.id === id ? data[0] : session
-          )
-        );
+        setSessions(prevSessions => prevSessions.map(session => session.id === id ? data[0] : session));
       }
 
-      // Notify parent component of the change
       if (onSessionChange) {
         onSessionChange('update', data[0]);
       }
 
-      // Refresh sessions if function is available
       if (fetchSessions) {
         await fetchSessions();
       }
@@ -454,48 +580,47 @@ const SessionsTab = ({
   };
 
   const deleteSession = (id, title) => {
-    Alert.alert(
-      'Delete session',
-      `Delete "${title}"? This cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setBusy(true);
-              const { error } = await supabase.from('sessions').delete().eq('id', id);
-              if (error) throw error;
+    Alert.alert('Delete session', `Delete "${title}"? This cannot be undone.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            setBusy(true);
+            const { error } = await supabase.from('sessions').delete().eq('id', id);
+            if (error) throw error;
 
-              // Update local state immediately
-              if (setSessions) {
-                setSessions(prevSessions => 
-                  prevSessions.filter(session => session.id !== id)
-                );
-              }
-
-              // Notify parent component of the change
-              if (onSessionChange) {
-                onSessionChange('delete', { id, title });
-              }
-
-              // Refresh sessions if function is available
-              if (fetchSessions) {
-                await fetchSessions();
-              }
-
-              Alert.alert('Deleted', 'Session removed.');
-            } catch (e) {
-              console.error('Delete error:', e);
-              Alert.alert('Error', e.message || 'Failed to delete session.');
-            } finally {
-              setBusy(false);
+            if (setSessions) {
+              setSessions(prevSessions => prevSessions.filter(session => session.id !== id));
             }
-          },
+
+            if (onSessionChange) {
+              onSessionChange('delete', { id, title });
+            }
+
+            if (fetchSessions) {
+              await fetchSessions();
+            }
+
+            Alert.alert('Deleted', 'Session removed.');
+          } catch (e) {
+            console.error('Delete error:', e);
+            Alert.alert('Error', e.message || 'Failed to delete session.');
+          } finally {
+            setBusy(false);
+          }
         },
-      ]
-    );
+      },
+    ]);
+  };
+
+  const handleManualRefresh = async () => {
+    if (fetchSessions) {
+      setLoading(true);
+      await fetchSessions();
+      setLoading(false);
+    }
   };
 
   const renderStatusPill = (roomId) => {
@@ -511,12 +636,8 @@ const SessionsTab = ({
       else if (ratio > 0.7) status = 'warning';
     }
 
-    const style =
-      status === 'critical'
-        ? styles.pillCritical
-        : status === 'warning'
-          ? styles.pillWarning
-          : styles.pillNormal;
+    const style = status === 'critical' ? styles.pillCritical :
+                 status === 'warning' ? styles.pillWarning : styles.pillNormal;
 
     return (
       <View style={[styles.pill, style]}>
@@ -525,27 +646,6 @@ const SessionsTab = ({
         </Text>
       </View>
     );
-  };
-
-  // Helper function to get current session for a room
-  const getCurrentSession = (roomId) => {
-    const now = new Date();
-    return sessions.find(session => 
-      session.room_id === roomId && 
-      new Date(session.start_time) <= now && 
-      new Date(session.end_time) >= now
-    );
-  };
-
-  // Helper function to get next session for a room
-  const getNextSession = (roomId) => {
-    const now = new Date();
-    return sessions
-      .filter(session => 
-        session.room_id === roomId && 
-        new Date(session.start_time) > now
-      )
-      .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))[0];
   };
 
   if (loading) {
@@ -559,68 +659,63 @@ const SessionsTab = ({
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollPad}>
-        {/* Sessions List */}
-        {sessions.map((s) => {
-          const room = roomById.get(s.room_id);
-          const speaker = speakerById.get(s.speaker_id);
+      {sessions.length === 0 ? (
+        <EmptyState 
+          userRole={userRole} 
+          onRefresh={handleManualRefresh}
+          loading={loading}
+        />
+      ) : (
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollPad}>
+          {sessions.map((s) => {
+            const room = roomById.get(s.room_id);
+            const speaker = speakerById.get(s.speaker_id);
 
-          return (
-            <View key={s.id} style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.title}>{s.title}</Text>
-                {renderStatusPill(s.room_id)}
+            return (
+              <View key={s.id} style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.title}>{s.title}</Text>
+                  {renderStatusPill(s.room_id)}
+                </View>
+
+                <Text style={styles.meta}>
+                  {Icons.locationPin || '📍'} Room: <Text style={styles.metaBold}>{room?.room_name || '—'}</Text>
+                </Text>
+                <Text style={styles.meta}>
+                  {Icons.person || '👤'} Speaker: <Text style={styles.metaBold}>{speaker?.full_name || '—'}</Text>
+                </Text>
+                <Text style={styles.meta}>
+                  {Icons.clock || '🕒'} {fmtTime(s.start_time)} — {fmtTime(s.end_time)}
+                </Text>
+
+                {s.description ? <Text style={styles.desc}>{s.description}</Text> : null}
+                {s.tags ? (
+                  <View style={styles.tagsContainer}>
+                    <Text style={styles.tagPill}>{s.tags}</Text>
+                  </View>
+                ) : null}
+
+                {userRole === 'admin' && (
+                  <View style={styles.actions}>
+                    <TouchableOpacity
+                      style={[styles.btn, styles.btnEdit]}
+                      onPress={() => setEditSession(s)}
+                    >
+                      <Text style={styles.btnText}>Edit</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.btn, styles.btnDelete]}
+                      onPress={() => deleteSession(s.id, s.title)}
+                    >
+                      <Text style={styles.btnText}>Delete</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
-
-              <Text style={styles.meta}>
-                {Icons.locationPin || '📍'} Room: <Text style={styles.metaBold}>{room?.room_name || '—'}</Text>
-              </Text>
-              <Text style={styles.meta}>
-                {Icons.person || '👤'} Speaker: <Text style={styles.metaBold}>{speaker?.full_name || '—'}</Text>
-              </Text>
-              <Text style={styles.meta}>
-                {Icons.clock || '🕒'} {fmtTime(s.start_time)} — {fmtTime(s.end_time)}
-              </Text>
-
-              {s.description ? <Text style={styles.desc}>{s.description}</Text> : null}
-              {s.tags ? (
-                <View style={styles.tagsContainer}>
-                  <Text style={styles.tagPill}>{s.tags}</Text>
-                </View>
-              ) : null}
-
-              {userRole === 'admin' && (
-                <View style={styles.actions}>
-                  <TouchableOpacity
-                    style={[styles.btn, styles.btnEdit]}
-                    onPress={() => setEditSession(s)}
-                  >
-                    <Text style={styles.btnText}>Edit</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.btn, styles.btnDelete]}
-                    onPress={() => deleteSession(s.id, s.title)}
-                  >
-                    <Text style={styles.btnText}>Delete</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          );
-        })}
-        {sessions.length === 0 && (
-          <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>📅</Text>
-            <Text style={styles.emptyText}>No sessions scheduled yet.</Text>
-            <Text style={styles.emptySubtext}>
-              {userRole === 'admin' 
-                ? 'Tap the + button to add your first session.' 
-                : 'Sessions will appear here when they are scheduled.'
-              }
-            </Text>
-          </View>
-        )}
-      </ScrollView>
+            );
+          })}
+        </ScrollView>
+      )}
 
       {userRole === 'admin' && (
         <TouchableOpacity style={styles.fab} onPress={() => setShowAddModal(true)}>
@@ -654,7 +749,7 @@ const SessionsTab = ({
   );
 };
 
-// Export helper functions for use in RoomsTab
+// Export helper functions
 export const sessionHelpers = {
   getCurrentSession: (sessions, roomId) => {
     const now = new Date();
@@ -680,6 +775,118 @@ export const sessionHelpers = {
       .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
   }
 };
+
+const emptyStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  content: {
+    alignItems: 'center',
+    maxWidth: 300,
+  },
+  icon: {
+    fontSize: 64,
+    marginBottom: 24,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.text,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 22,
+  },
+  secondaryButton: {
+    borderWidth: 2,
+    borderColor: colors.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    minWidth: 150,
+    alignItems: 'center',
+  },
+  secondaryButtonText: {
+    color: colors.primary,
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+});
+
+const customPickerStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  container: {
+    backgroundColor: colors.background,
+    borderRadius: 16,
+    padding: 20,
+    width: '90%',
+    maxWidth: 400,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+    color: colors.text,
+  },
+  pickerContainer: {
+    marginBottom: 20,
+  },
+  timeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  timePicker: {
+    flex: 1,
+    marginHorizontal: 5,
+  },
+  label: {
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: colors.text,
+  },
+  picker: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    backgroundColor: colors.lightPink,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  button: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: colors.textSecondary,
+  },
+  confirmButton: {
+    backgroundColor: colors.primary,
+  },
+  buttonText: {
+    color: colors.background,
+    fontWeight: 'bold',
+  },
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -815,26 +1022,6 @@ const styles = StyleSheet.create({
   },
   pillCritical: {
     backgroundColor: colors.error,
-  },
-  empty: {
-    marginTop: 80,
-    alignItems: 'center',
-    padding: 20,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  emptyText: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    color: colors.textSecondary,
-    fontSize: 14,
-    textAlign: 'center',
   },
 });
 

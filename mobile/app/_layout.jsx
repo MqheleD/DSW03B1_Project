@@ -1,52 +1,42 @@
 import { useState, useEffect } from "react";
 import { Stack } from "expo-router";
-import { StatusBar, View } from "react-native";
+import { StatusBar, View, ActivityIndicator } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ThemeProvider } from "@/hooks/ThemeContext";
-import { AuthContextProvider } from "../hooks/AuthContext";
-import SplashScreen from "./SplashScreen";
+import { AuthContextProvider, UserAuth } from "../hooks/AuthContext";
 import NotificationBanner from "@/components/NotificationBanner";
 import useNotification from "@/hooks/useNotification";
 
-export default function RootLayout() {
+// This component can safely use UserAuth because it's inside AuthContextProvider
+function AppContentWithAuth() {
   const [showSplash, setShowSplash] = useState(true);
+  const { loading } = UserAuth();
 
   useEffect(() => {
     const timeout = setTimeout(() => setShowSplash(false), 3000);
     return () => clearTimeout(timeout);
   }, []);
 
-  if (showSplash)
+  // Show loading indicator instead of splash screen
+  if (showSplash || loading) {
     return (
-      <ThemeProvider>
-        <SplashScreen />
-      </ThemeProvider>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
     );
+  }
 
   return (
-    <AuthContextProvider>
-      <ThemeProvider>
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <StatusBar style="auto" />
-
-          {/* Main app content */}
-          <View style={{ flex: 1 }}>
-            <Stack screenOptions={{ headerShown: false }} />
-
-            {/* Notification Banner */}
-            <NotificationWrapper />
-          </View>
-        </GestureHandlerRootView>
-      </ThemeProvider>
-    </AuthContextProvider>
+    <View style={{ flex: 1 }}>
+      <Stack screenOptions={{ headerShown: false }} />
+      <NotificationWrapper />
+    </View>
   );
 }
 
-// 👇 NotificationWrapper must be *inside* AuthContextProvider
 function NotificationWrapper() {
   const { notification, showNotification } = useNotification();
 
-  // Only render if we have a notification AND it should be visible
   if (!notification || !showNotification) return null;
 
   return (
@@ -57,5 +47,18 @@ function NotificationWrapper() {
       onHide={() => {}}
       type={notification.type || "info"}
     />
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AuthContextProvider>
+      <ThemeProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <StatusBar style="auto" />
+          <AppContentWithAuth />
+        </GestureHandlerRootView>
+      </ThemeProvider>
+    </AuthContextProvider>
   );
 }

@@ -40,6 +40,8 @@ export default function Settings() {
   const { theme, switchTheme, currentColors } = useContext(ThemeContext);
   const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
   const [isThemeModalVisible, setIsThemeModalVisible] = useState(false);
+  const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false); // Add this state
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false); // Add this state
 
   const key = `socialLinks_${profile?.id}`;
 
@@ -242,6 +244,127 @@ export default function Settings() {
               Close
             </Text>
           </TouchableOpacity>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+
+  // Add Logout Confirmation Modal
+  const LogoutConfirmationModal = () => (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={isLogoutModalVisible}
+      onRequestClose={() => setIsLogoutModalVisible(false)}
+    >
+      <Pressable
+        style={styles.modalOverlay}
+        onPress={() => setIsLogoutModalVisible(false)}
+      >
+        <Pressable
+          style={[
+            styles.modalContent,
+            { backgroundColor: currentColors.cardBackground },
+          ]}
+          onPress={(e) => e.stopPropagation()}
+        >
+          <Text
+            style={[styles.modalTitle, { color: currentColors.textPrimary }]}
+          >
+            Log Out?
+          </Text>
+          <Text
+            style={[
+              styles.modalSubtitle,
+              { color: currentColors.textSecondary, textAlign: "center" },
+            ]}
+          >
+            Are you sure you want to log out?
+          </Text>
+          <View style={styles.modalButtonsContainer}>
+            <TouchableOpacity
+              onPress={() => setIsLogoutModalVisible(false)}
+              style={[
+                styles.modalButton,
+                styles.modalCancelButton,
+                { borderColor: currentColors.border },
+              ]}
+            >
+              <Text style={{ color: currentColors.textPrimary }}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleLogout}
+              style={[
+                styles.modalButton,
+                styles.modalConfirmButton,
+                { backgroundColor: currentColors.logoutButtonBackground },
+              ]}
+            >
+              <Text style={{ color: "#FFFFFF", fontWeight: "600" }}>
+                Yes, Log Out
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+
+  const DeleteAccountModal = () => (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={isDeleteModalVisible}
+      onRequestClose={() => setIsDeleteModalVisible(false)}
+    >
+      <Pressable
+        style={styles.modalOverlay}
+        onPress={() => setIsDeleteModalVisible(false)}
+      >
+        <Pressable
+          style={[
+            styles.modalContent,
+            { backgroundColor: currentColors.cardBackground },
+          ]}
+          onPress={(e) => e.stopPropagation()}
+        >
+          <Text
+            style={[styles.modalTitle, { color: currentColors.textPrimary }]}
+          >
+            Delete Account?
+          </Text>
+          <Text
+            style={[
+              styles.modalSubtitle,
+              { color: currentColors.textSecondary, textAlign: "center" },
+            ]}
+          >
+            Are you sure you want to delete your account? This action cannot be undone.
+          </Text>
+          <View style={styles.modalButtonsContainer}>
+            <TouchableOpacity
+              onPress={() => setIsDeleteModalVisible(false)}
+              style={[
+                styles.modalButton,
+                styles.modalCancelButton,
+                { borderColor: currentColors.border },
+              ]}
+            >
+              <Text style={{ color: currentColors.textPrimary }}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleLogout}
+              style={[
+                styles.modalButton,
+                styles.modalConfirmButton,
+                { backgroundColor: currentColors.logoutButtonBackground },
+              ]}
+            >
+              <Text style={{ color: "#FFFFFF", fontWeight: "700" }}>
+                Delete Account
+              </Text>
+            </TouchableOpacity>
+          </View>
         </Pressable>
       </Pressable>
     </Modal>
@@ -462,7 +585,7 @@ export default function Settings() {
             ]}
           >
             <TouchableOpacity
-              onPress={handleLogout}
+              onPress={() => setIsLogoutModalVisible(true)} // Show confirmation modal
               style={[
                 styles.logoutButton,
                 { backgroundColor: currentColors.logoutButtonBackground },
@@ -474,11 +597,23 @@ export default function Settings() {
               </Text>
             </TouchableOpacity>
           </View>
+          <TouchableOpacity onPress={() => setIsDeleteModalVisible(true)}>
+            <Text style={{ color: 'red', textAlign: 'center', marginTop: 20 }}>
+              Delete My Account
+            </Text>
+          </TouchableOpacity>
+
         </ScrollView>
       </KeyboardAvoidingView>
 
       {/* Theme Modal */}
       <ThemeModal />
+
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmationModal />
+
+      {/* Delete Account Confirmation Modal */}
+      <DeleteAccountModal />
     </SafeAreaView>
   );
 }
@@ -580,8 +715,30 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    marginBottom: 20,
+    marginBottom: 12,
     textAlign: "center",
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    marginBottom: 24,
+  },
+  modalButtonsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    marginHorizontal: 8,
+  },
+  modalCancelButton: {
+    borderWidth: 1,
+  },
+  modalConfirmButton: {
+    // Uses the logoutButtonBackground color from context
   },
   themeOption: {
     flexDirection: "row",

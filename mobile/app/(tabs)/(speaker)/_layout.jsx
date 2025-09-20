@@ -1,12 +1,20 @@
+// (tabs)/(speaker)/_layout.jsx
 import { Tabs } from "expo-router";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { ThemeContext } from "@/hooks/ThemeContext";
 import React, { useContext } from "react";
 
-export default function TabsLayout() {
-  const { currentColors } = useContext(ThemeContext);
+export default function SpeakerTabsLayout() {
+  const themeContext = useContext(ThemeContext);
+  
+  if (!themeContext) {
+    console.error("ThemeContext not found!");
+    return null;
+  }
+  
+  const { currentColors } = themeContext;
 
   return (
     <Tabs
@@ -18,7 +26,7 @@ export default function TabsLayout() {
           left: 20,
           right: 20,
           elevation: 10,
-          backgroundColor: currentColors.navBarBackground, // Use the card background color from the theme
+          backgroundColor: currentColors.navBarBackground,
           borderRadius: 30,
           height: 70,
           shadowColor: "#000",
@@ -28,7 +36,7 @@ export default function TabsLayout() {
           paddingBottom: Platform.OS === "android" ? 10 : 20,
           marginHorizontal: 10,
         },
-        tabBarActiveTintColor: currentColors.primaryButton, // DodgerBlue or preferred highlight
+        tabBarActiveTintColor: currentColors.primaryButton,
         tabBarInactiveTintColor: currentColors.secondaryButton,
       }}
     >
@@ -51,11 +59,11 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="schedule"
+        name="slides"
         options={{
-          title: "Schedule",
+          title: "Slides",
           tabBarIcon: ({ color }) => (
-            <MaterialIcons name="schedule" size={24} color={color} />
+            <MaterialIcons name="slideshow" size={24} color={color} />
           ),
         }}
       />

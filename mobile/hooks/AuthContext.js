@@ -8,6 +8,7 @@ export const AuthContextProvider = ({ children }) => {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   useEffect(() => {
     let profileSubscription = null;
@@ -27,6 +28,7 @@ export const AuthContextProvider = ({ children }) => {
         console.error("Error loading stored data:", error);
       } finally {
         setLoading(false);
+        setInitialLoadComplete(true);
       }
     };
 
@@ -186,8 +188,9 @@ export const AuthContextProvider = ({ children }) => {
       value={{
         session,
         profile,
-        role: profile?.role ?? null, // Easily access role anywhere
-        loading,
+        role: profile?.role ?? null,
+        loading: loading || !initialLoadComplete, // More accurate loading state
+        initialLoadComplete,
         signInUser,
         signUpNewUser,
         signOut,
@@ -199,4 +202,10 @@ export const AuthContextProvider = ({ children }) => {
   );
 };
 
-export const UserAuth = () => useContext(AuthContext);
+export const UserAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("UserAuth must be used within an AuthContextProvider");
+  }
+  return context;
+};

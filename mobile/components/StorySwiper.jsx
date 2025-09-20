@@ -30,6 +30,7 @@ export default function StorySwiper() {
     General: require("../assets/characters/General.png"),
     keynote: require("../assets/characters/Speaker.png"),
     masterclass: require("../assets/characters/Headset.png"),
+    workshop: require("../assets/characters/Headset.png"),
   };
 
   useEffect(() => {

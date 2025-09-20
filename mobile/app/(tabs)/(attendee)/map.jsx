@@ -112,10 +112,10 @@ export default function MapScreen() {
     },
     {
       "id": "2",
-      "title": "Food Court",
+      "title": "Parking Lot",
       "latitude": -26.1217,
       "longitude": 28.0462,
-      "type": "food"
+      "type": "parking"
     },
     {
       "id": "3",

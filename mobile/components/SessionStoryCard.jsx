@@ -12,6 +12,8 @@ const tagMascot = {
   // VFX: require("../assets/images/vfx-mascot.png"),
   panel: require("../assets/characters/Panel.png"),
   General: require("../assets/characters/General.png"),
+  masterclass: require("../assets/characters/Headset.png"),
+workshop: require("../assets/characters/Headset.png"),
 };
 
 export default function SessionStoryCard({ session, onPress, onLongPress, style }) {

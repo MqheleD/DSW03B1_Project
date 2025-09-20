@@ -28,14 +28,13 @@ export default function Signin() {
 
   const [openInterest, setOpenInterest] = useState(false);
   // const [interest, setInterest] = useState(null);
-  const [GenderList, setgenderList] = useState([
-    { label: "Female", value: "Female" },
-    { label: "Male", value: "Male" },
-    { label: "Non-Binary", value: "Non-Binary" },
-    { label: "Prefer not say", value: "Prefer not to say" },
+  const [interestsList, setInterestsList] = useState([
+    { label: "3D animation", value: "3D animation" },
+    { label: "AI integration", value: "AI integration" },
+    { label: "VFX", value: "VFX" },
+    { label: "Character development", value: "Character development" },
+    { label: "Film and television", value: "film and television" },
   ]);
-
-  const [interestsList,setInterestsList]=([]);
 
   const [show, setShow] = useState(true);
 
@@ -245,7 +244,30 @@ export default function Signin() {
 
       if (profileError) throw profileError;
 
-      
+      console.log("Role value:", role);
+      console.log("Role type:", typeof role);
+
+      if (role === "speaker"){
+        const speakerData = {
+          id: user.id,
+          full_name: fullName,
+          email,
+          organization: organisation || null,
+          attendee_id: user.id
+        };
+
+        console.log("Inserting:", speakerData)
+
+        const {error: speakerError} = await supabase
+        .from("speakers")
+        .insert(speakerData);
+
+        if (speakerError) throw speakerError;
+
+        console.log("Inserted successfully")
+      }
+
+      // ✅ Sync profile with context and AsyncStorage
       await updateProfile(profileData);
 
       Alert.alert("Signed up successfully!");
@@ -319,38 +341,13 @@ export default function Signin() {
                   value={age}
                   onChangeText={setAge}
                 />
-             
-   <View style={{ zIndex: 2000, width: "90%" }}>
-  <DropDownPicker
-    open={openInterest}
-    value={gender}                // ✅ bind to gender state
-    items={GenderList}            // ✅ supply GenderList items
-    setOpen={setOpenInterest}
-    setValue={setGender}          // ✅ update gender state directly
-    setItems={setgenderList}
-    placeholder="Select Gender"
-    style={{
-      borderWidth: 0,
-      backgroundColor: "white",
-      elevation: 2,
-      marginBottom: "5%",
-    }}
-    dropDownContainerStyle={{
-      borderWidth: 0,
-      backgroundColor: "white",
-      elevation: 2,
-      marginBottom: "20%",
-    }}
-    selectedItemContainerStyle={{ backgroundColor: "#88A8D1" }}
-    selectedItemLabelStyle={{
-      color: "black",
-      fontWeight: "bold",
-    }}
-    listItemLabelStyle={{
-      color: "black",
-    }}
-  />
-</View>
+                <TextInput
+                  style={styles.inputfield}
+                  placeholderTextColor="gray"
+                  value={gender}
+                  placeholder="Gender: *Optional"
+                  onChangeText={setGender}
+                />
                 <TouchableOpacity
                   onPress={() => setShow(false)}
                   style={{
@@ -386,7 +383,39 @@ export default function Signin() {
                   }}
                 />
 
-               
+                <View style={{ zIndex: 2000, width: "90%" }}>
+                  <DropDownPicker
+                    open={openInterest}
+                    value={interests}
+                    items={interestsList}
+                    setOpen={setOpenInterest}
+                    // setValue={(callback) => setInterest(callback(interest))}
+                    setValue={setInterests}
+                    setItems={setInterestsList}
+                    multiple={true}
+                    placeholder="Select Interest"
+                    style={{
+                      borderWidth: 0,
+                      backgroundColor: "white",
+                      elevation: 2,
+                      marginBottom: "5%",
+                    }}
+                    dropDownContainerStyle={{
+                      borderWidth: 0,
+                      backgroundColor: "white",
+                      elevation: 2,
+                      marginBottom: "20%",
+                    }}
+                    selectedItemContainerStyle={{ backgroundColor: "#88A8D1" }}
+                    selectedItemLabelStyle={{
+                      color: "black",
+                      fontWeight: "bold",
+                    }}
+                    listItemLabelStyle={{
+                      color: "black",
+                    }}
+                  />
+                </View>
 
                 <View style={{ zIndex: 1000, width: "90%" }}>
                   <DropDownPicker
@@ -519,8 +548,8 @@ export default function Signin() {
           )}
         </View>
       </ScrollView>
-      {/*<View style={styles.imageSize}>
-      <Image source={env_master_} style={styles.image} />
+      {/*<View style={styles.imageSize}>*/}
+      {/* <Image source={env_master_} style={styles.image} /> */}
       {/*</View>*/}
     </KeyboardAvoidingView>
   );
@@ -599,8 +628,7 @@ const styles = StyleSheet.create({
     // width: 500,
     // height: 450,
     resizeMode: "contain",
-     position: "absolute",
-    marginTop:"10%",
+    position: "absolute",
     bottom: 60,
     width: 250,
     height: 250,
