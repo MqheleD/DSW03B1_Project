@@ -12,11 +12,11 @@ import {
 } from "react-native";
 import Modal from "react-native-modal";
 import * as ImagePicker from "expo-image-picker";
-import * as FileSystem from "expo-file-system";
+import { decode } from "base64-arraybuffer";
 import { Ionicons } from "@expo/vector-icons";
 import supabase from "@/app/supabaseClient";
 import { UserAuth } from "../../hooks/AuthContext";
-import {SafeAreaView} from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const numColumns = 3;
 const screenWidth = Dimensions.get("window").width;
@@ -41,6 +41,7 @@ export default function Feed() {
         .from("photos")
         .select("*")
         .order("created_at", { ascending: false });
+
       const { data, error } = showMineOnly
         ? await query.eq("user_id", userId)
         : await query;
@@ -51,7 +52,7 @@ export default function Feed() {
         id: item.id,
         image_url: item.image_url,
         user_id: item.user_id,
-        file_path: item.image_url.split("/user-photos/")[1],
+        file_path: item.image_url.split("/user-uploads/")[1],
       }));
 
       setImages(formatted);
@@ -67,34 +68,6 @@ export default function Feed() {
     fetchImages();
   }, [fetchImages]);
 
-  // const handleImagePick = async (camera = false) => {
-  //   const permission = camera
-  //     ? await ImagePicker.requestCameraPermissionsAsync()
-  //     : await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-  //   if (permission.status !== "granted") {
-  //     Alert.alert(
-  //       "Permission required",
-  //       `Please allow access to your ${camera ? "camera" : "photo library"}.`
-  //     );
-  //     return;
-  //   }
-
-  //   const result = camera
-  //     ? await ImagePicker.launchCameraAsync({
-  //         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-  //         quality: 1,
-  //       })
-  //     : await ImagePicker.launchImageLibraryAsync({
-  //         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-  //         quality: 1,
-  //       });
-
-  //   if (!result.canceled) {
-  //     await uploadToSupabase(result.assets[0].uri);
-  //   }
-  // };
-
   const handleImagePick = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
@@ -107,12 +80,14 @@ export default function Feed() {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1,
+      quality: 0.8,
+      allowsEditing: true,
+      // aspect: [1, 1],
+      base64: true,
     });
 
-    if (!result.canceled) {
-      const uri = result.assets[0].uri;
-      await uploadToSupabase(uri);
+    if (!result.canceled && result.assets[0].base64) {
+      await uploadToSupabase(result.assets[0].base64);
     }
   };
 
@@ -125,67 +100,46 @@ export default function Feed() {
 
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1,
+      quality: 0.8,
+      allowsEditing: true,
+      // aspect: [1, 1],
+      base64: true,
     });
 
-    if (!result.canceled) {
-      const uri = result.assets[0].uri;
-
-      // Upload to Supabase
-      await uploadToSupabase(uri);
-
-      // Download to local storage
-      try {
-        const fileName = uri.split("/").pop();
-        const destination = FileSystem.documentDirectory + fileName;
-
-        await FileSystem.copyAsync({
-          from: uri,
-          to: destination,
-        });
-
-        Alert.alert("Saved!", "Photo uploaded and saved.");
-      } catch (error) {
-        console.error("Download failed:", error);
-        Alert.alert("Error", "Could not save photo.");
-      }
+    if (!result.canceled && result.assets[0].base64) {
+      await uploadToSupabase(result.assets[0].base64);
     }
   };
 
   const uploadToSupabase = useCallback(
-    async (uri) => {
+    async (base64Data) => {
       try {
         setUploading(true);
 
-        const base64 = await FileSystem.readAsStringAsync(uri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-
-        const byteArray = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
-        const fileExt = uri.split(".").pop() || "jpg";
+        const fileExt = "jpg"; // you can make this dynamic if needed
         const filePath = `user-uploads/image_${Date.now()}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
           .from("user-photos")
-          .upload(filePath, byteArray, {
-            contentType: "image/jpeg",
+          .upload(filePath, decode(base64Data), {
+            contentType: `image/${fileExt}`,
             upsert: true,
           });
 
         if (uploadError) throw uploadError;
 
-        const publicUrl = supabase.storage
+        const { data: publicUrlData } = supabase.storage
           .from("user-photos")
-          .getPublicUrl(filePath).data.publicUrl;
+          .getPublicUrl(filePath);
 
         const { error: insertError } = await supabase.from("photos").insert({
           user_id: userId,
-          image_url: publicUrl,
+          image_url: publicUrlData.publicUrl,
         });
 
         if (insertError) throw insertError;
 
-        Alert.alert("Upload successful");
+        Alert.alert("Upload successful!");
         fetchImages();
       } catch (err) {
         console.error("Upload error:", err.message);
@@ -232,7 +186,7 @@ export default function Feed() {
 
   return (
     <SafeAreaView style={styles.container}>
-      
+
       <Image
         source={require('@/assets/images/header-image.png')} // or use a remote URI
         style={styles.bannerImage}
@@ -248,25 +202,26 @@ export default function Feed() {
           <Text>No images yet. Be the first to upload!</Text>
         </View>
       ) : (
-        <FlatList
-          data={images}
-          keyExtractor={(item) => item.id}
-          numColumns={numColumns}
-          renderItem={({ item }) => (
-            <Pressable onPress={() => setSelectedImage(item)}>
-              <View
-                style={[
-                  styles.imageContainer,
-                  { transform: [{ rotate: getRandomRotation() }] },
-                ]}
-              >
-                <Image source={{ uri: item.image_url }} style={styles.image} />
-                <Text style={styles.polaroidLabel}>Avijozi 2025</Text>
-              </View>
-            </Pressable>
-          )}
-        />
+        <View style={{ alignContent: "center", justifyContent: "center", flex: 1 }}>
+          <FlatList
+            data={images}
+            style={{paddingHorizontal: 5}}
+            keyExtractor={(item) => item.id}
+            numColumns={numColumns}
+            renderItem={({ item }) => (
+              <Pressable onPress={() => setSelectedImage(item)}>
+                <View
+                  style={[styles.imageContainer, { transform: [{ rotate: getRandomRotation() }] }]}
+                >
+                  <Image source={{ uri: item.image_url }} style={styles.image} />
+                  <Text style={styles.polaroidLabel}>Avijozi 2025</Text>
+                </View>
+              </Pressable>
+            )}
+          />
+        </View>
       )}
+
       <View style={styles.buttonRow}>
         <Pressable
           onPress={handleImagePick}
@@ -293,6 +248,7 @@ export default function Feed() {
           />
         </Pressable>
       </View>
+
       <Modal
         isVisible={!!selectedImage}
         onBackdropPress={() => setSelectedImage(null)}
@@ -324,19 +280,8 @@ export default function Feed() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    // paddingTop: 50,
-    // paddingHorizontal: 10,
-    backgroundColor: "#fff",
-  },
-  buttonRow: {
-    position: "absolute",
-    bottom: 20,
-    // right: 20,
-    flexDirection: "row",
-    gap: 12,
-  },
+  container: { flex: 1, backgroundColor: "#fff" },
+  buttonRow: { position: "absolute", bottom: 20, flexDirection: "row", gap: 12 },
   iconButton: {
     alignItems: "center",
     justifyContent: "center",
@@ -346,11 +291,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: 5,
   },
-  loader: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
+  loader: { flex: 1, justifyContent: "center", alignItems: "center" },
   imageContainer: {
     backgroundColor: "#fff",
     borderRadius: 10,
@@ -363,18 +304,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
   },
-  polaroidLabel: {
-    marginTop: 6,
-    fontSize: 12,
-    color: "#333",
-    fontStyle: "italic",
-  },
-  image: {
-    width: "100%",
-    height: imageSize - 40,
-    borderRadius: 6,
-    backgroundColor: "#eee",
-  },
+  polaroidLabel: { marginTop: 6, fontSize: 12, color: "#333", fontStyle: "italic" },
+  image: { width: "100%", height: imageSize - 40, borderRadius: 6, backgroundColor: "#eee" },
   modalOverlay: {
     justifyContent: "center",
     alignItems: "center",
@@ -382,19 +313,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 10,
   },
-  fullImage: {
-    width: "100%",
-    height: 400,
-  },
-  closeButton: {
-    marginTop: 20,
-    backgroundColor: "#fff",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    alignSelf: "center",
-    elevation: 3,
-  },
+  fullImage: { width: "100%", height: 400 },
+  closeButton: { marginTop: 20, backgroundColor: "#fff", paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, alignSelf: "center", elevation: 3 },
+  closeText: { fontWeight: "bold" },
+  deleteIcon: { position: "absolute", top: 10, right: 10, zIndex: 10 },
   bannerImage: {
     width: "100%",
     height: 150,
